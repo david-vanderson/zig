@@ -5926,7 +5926,7 @@ fn zirCall(
         !block.is_comptime and (input_is_error or pop_error_return_trace))
     {
         const call_inst: Air.Inst.Ref = if (modifier == .always_tail) undefined else b: {
-            break :b try sema.analyzeCall(block, func, func_src, call_src, modifier, ensure_result_used, resolved_args, bound_arg_src);
+            break :b try sema.analyzeCall(block, func, func_src, call_src, modifier, ensure_result_used, resolved_args, bound_arg_src, false);
         };
 
         const return_ty = sema.typeOf(call_inst);
@@ -5955,11 +5955,11 @@ fn zirCall(
         }
 
         if (modifier == .always_tail) // Perform the call *after* the restore, so that a tail call is possible.
-            return sema.analyzeCall(block, func, func_src, call_src, modifier, ensure_result_used, resolved_args, bound_arg_src);
+            return sema.analyzeCall(block, func, func_src, call_src, modifier, ensure_result_used, resolved_args, bound_arg_src, false);
 
         return call_inst;
     } else {
-        return sema.analyzeCall(block, func, func_src, call_src, modifier, ensure_result_used, resolved_args, bound_arg_src);
+        return sema.analyzeCall(block, func, func_src, call_src, modifier, ensure_result_used, resolved_args, bound_arg_src, func_type.tag() == .bound_fn);
     }
 }
 
@@ -6074,6 +6074,7 @@ fn analyzeCall(
     ensure_result_used: bool,
     uncasted_args: []const Air.Inst.Ref,
     bound_arg_src: ?LazySrcLoc,
+    bound_fn: bool,
 ) CompileError!Air.Inst.Ref {
     const mod = sema.mod;
 
@@ -6488,6 +6489,27 @@ fn analyzeCall(
         for (uncasted_args) |uncasted_arg, i| {
             if (i < fn_params_len) {
                 const param_ty = func_ty.fnParamType(i);
+                {
+                    //if (decl_src) |dsrc| {
+                    //if (mem.eql(u8, "test.zig", dsrc.file_scope.sub_file_path)) {
+                    //std.debug.print("  arg {d} type '{}'\n", .{ i, param_ty.fmt(sema.mod) });
+                    if (bound_fn and i == 0 and param_ty.tag() != .single_const_pointer and param_ty.tag() != .single_mut_pointer) {
+                        //std.debug.print("{s}: bound_fn arg {d} type '{}' function type '{}'\n", .{ dsrc.file_scope.sub_file_path, i, param_ty.fmt(sema.mod), callee_ty.fmt(sema.mod) });
+
+                        const msg = msg: {
+                            const msg = try sema.errMsg(block, func_src, "calling function with dot syntax requires first argument of function to be pointer", .{});
+                            errdefer msg.destroy(sema.gpa);
+
+                            const decl_src = try sema.funcDeclSrc(block, func_src, func);
+                            if (decl_src) |some| try sema.mod.errNoteNonLazy(some, msg, "function declared here", .{});
+                            break :msg msg;
+                        };
+
+                        return sema.failWithOwnedErrorMsg(msg);
+                    }
+                    //}
+                    //}
+                }
                 args[i] = sema.analyzeCallArg(
                     block,
                     .unneeded,
@@ -11135,7 +11157,7 @@ fn maybeErrorUnwrap(sema: *Sema, block: *Block, body: []const Zir.Inst.Index, op
                 const panic_fn = try sema.getBuiltin(block, src, "panicUnwrapError");
                 const err_return_trace = try sema.getErrorReturnTrace(block, src);
                 const args: [2]Air.Inst.Ref = .{ err_return_trace, operand };
-                _ = try sema.analyzeCall(block, panic_fn, src, src, .auto, false, &args, null);
+                _ = try sema.analyzeCall(block, panic_fn, src, src, .auto, false, &args, null, false);
                 return true;
             },
             .panic => {
@@ -11146,7 +11168,7 @@ fn maybeErrorUnwrap(sema: *Sema, block: *Block, body: []const Zir.Inst.Index, op
                 const panic_fn = try sema.getBuiltin(block, src, "panic");
                 const err_return_trace = try sema.getErrorReturnTrace(block, src);
                 const args: [3]Air.Inst.Ref = .{ msg_inst, err_return_trace, .null_value };
-                _ = try sema.analyzeCall(block, panic_fn, src, src, .auto, false, &args, null);
+                _ = try sema.analyzeCall(block, panic_fn, src, src, .auto, false, &args, null, false);
                 return true;
             },
             else => unreachable,
@@ -16351,7 +16373,7 @@ fn retWithErrTracing(
     const args: [1]Air.Inst.Ref = .{err_return_trace};
 
     if (!need_check) {
-        _ = try sema.analyzeCall(block, return_err_fn, src, src, .never_inline, false, &args, null);
+        _ = try sema.analyzeCall(block, return_err_fn, src, src, .never_inline, false, &args, null, false);
         _ = try block.addUnOp(ret_tag, operand);
         return always_noreturn;
     }
@@ -16362,7 +16384,7 @@ fn retWithErrTracing(
 
     var else_block = block.makeSubBlock();
     defer else_block.instructions.deinit(gpa);
-    _ = try sema.analyzeCall(&else_block, return_err_fn, src, src, .never_inline, false, &args, null);
+    _ = try sema.analyzeCall(&else_block, return_err_fn, src, src, .never_inline, false, &args, null, false);
     _ = try else_block.addUnOp(ret_tag, operand);
 
     try sema.air_extra.ensureUnusedCapacity(gpa, @typeInfo(Air.CondBr).Struct.fields.len +
@@ -20598,7 +20620,7 @@ fn zirBuiltinCall(sema: *Sema, block: *Block, inst: Zir.Inst.Index) CompileError
         }
     }
     const ensure_result_used = extra.flags.ensure_result_used;
-    return sema.analyzeCall(block, func, func_src, call_src, modifier, ensure_result_used, resolved_args, bound_arg_src);
+    return sema.analyzeCall(block, func, func_src, call_src, modifier, ensure_result_used, resolved_args, bound_arg_src, false);
 }
 
 fn zirFieldParentPtr(sema: *Sema, block: *Block, inst: Zir.Inst.Index) CompileError!Air.Inst.Ref {
@@ -22032,7 +22054,7 @@ fn panicWithMsg(
         Value.@"null",
     );
     const args: [3]Air.Inst.Ref = .{ msg_inst, null_stack_trace, .null_value };
-    _ = try sema.analyzeCall(block, panic_fn, src, src, .auto, false, &args, null);
+    _ = try sema.analyzeCall(block, panic_fn, src, src, .auto, false, &args, null, false);
     return always_noreturn;
 }
 
@@ -22073,7 +22095,7 @@ fn panicUnwrapError(
             const err = try fail_block.addTyOp(unwrap_err_tag, Type.anyerror, operand);
             const err_return_trace = try sema.getErrorReturnTrace(&fail_block, src);
             const args: [2]Air.Inst.Ref = .{ err_return_trace, err };
-            _ = try sema.analyzeCall(&fail_block, panic_fn, src, src, .auto, false, &args, null);
+            _ = try sema.analyzeCall(&fail_block, panic_fn, src, src, .auto, false, &args, null, false);
         }
     }
     try sema.addSafetyCheckExtra(parent_block, ok, &fail_block);
@@ -22114,7 +22136,7 @@ fn panicIndexOutOfBounds(
         } else {
             const panic_fn = try sema.getBuiltin(&fail_block, src, "panicOutOfBounds");
             const args: [2]Air.Inst.Ref = .{ index, len };
-            _ = try sema.analyzeCall(&fail_block, panic_fn, src, src, .auto, false, &args, null);
+            _ = try sema.analyzeCall(&fail_block, panic_fn, src, src, .auto, false, &args, null, false);
         }
     }
     try sema.addSafetyCheckExtra(parent_block, ok, &fail_block);
@@ -22156,7 +22178,7 @@ fn panicSentinelMismatch(
     else {
         const panic_fn = try sema.getBuiltin(parent_block, src, "checkNonScalarSentinel");
         const args: [2]Air.Inst.Ref = .{ expected_sentinel, actual_sentinel };
-        _ = try sema.analyzeCall(parent_block, panic_fn, src, src, .auto, false, &args, null);
+        _ = try sema.analyzeCall(parent_block, panic_fn, src, src, .auto, false, &args, null, false);
         return;
     };
     const gpa = sema.gpa;
@@ -22185,7 +22207,7 @@ fn panicSentinelMismatch(
         } else {
             const panic_fn = try sema.getBuiltin(&fail_block, src, "panicSentinelMismatch");
             const args: [2]Air.Inst.Ref = .{ expected_sentinel, actual_sentinel };
-            _ = try sema.analyzeCall(&fail_block, panic_fn, src, src, .auto, false, &args, null);
+            _ = try sema.analyzeCall(&fail_block, panic_fn, src, src, .auto, false, &args, null, false);
         }
     }
     try sema.addSafetyCheckExtra(parent_block, ok, &fail_block);
