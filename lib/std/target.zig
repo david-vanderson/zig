@@ -61,34 +61,34 @@ pub const Target = struct {
             plan9,
             other,
 
-            pub fn isDarwin(tag: Tag) bool {
-                return switch (tag) {
+            pub fn isDarwin(tag: *const Tag) bool {
+                return switch (tag.*) {
                     .ios, .macos, .watchos, .tvos => true,
                     else => false,
                 };
             }
 
-            pub fn isBSD(tag: Tag) bool {
-                return tag.isDarwin() or switch (tag) {
+            pub fn isBSD(tag: *const Tag) bool {
+                return tag.isDarwin() or switch (tag.*) {
                     .kfreebsd, .freebsd, .openbsd, .netbsd, .dragonfly => true,
                     else => false,
                 };
             }
 
-            pub fn dynamicLibSuffix(tag: Tag) [:0]const u8 {
+            pub fn dynamicLibSuffix(tag: *const Tag) [:0]const u8 {
                 if (tag.isDarwin()) {
                     return ".dylib";
                 }
-                switch (tag) {
+                switch (tag.*) {
                     .windows => return ".dll",
                     else => return ".so",
                 }
             }
 
-            pub fn defaultVersionRange(tag: Tag, arch: Cpu.Arch) Os {
+            pub fn defaultVersionRange(tag: *const Tag, arch: Cpu.Arch) Os {
                 return .{
-                    .tag = tag,
-                    .version_range = VersionRange.default(tag, arch),
+                    .tag = tag.*,
+                    .version_range = VersionRange.default(tag.*, arch),
                 };
             }
         };
@@ -868,98 +868,98 @@ pub const Target = struct {
             // map one-to-one with the ZigLLVM_ArchType enum.
             spu_2,
 
-            pub fn isX86(arch: Arch) bool {
-                return switch (arch) {
+            pub fn isX86(arch: *const Arch) bool {
+                return switch (arch.*) {
                     .i386, .x86_64 => true,
                     else => false,
                 };
             }
 
-            pub fn isARM(arch: Arch) bool {
-                return switch (arch) {
+            pub fn isARM(arch: *const Arch) bool {
+                return switch (arch.*) {
                     .arm, .armeb => true,
                     else => false,
                 };
             }
 
-            pub fn isAARCH64(arch: Arch) bool {
-                return switch (arch) {
+            pub fn isAARCH64(arch: *const Arch) bool {
+                return switch (arch.*) {
                     .aarch64, .aarch64_be, .aarch64_32 => true,
                     else => false,
                 };
             }
 
-            pub fn isThumb(arch: Arch) bool {
-                return switch (arch) {
+            pub fn isThumb(arch: *const Arch) bool {
+                return switch (arch.*) {
                     .thumb, .thumbeb => true,
                     else => false,
                 };
             }
 
-            pub fn isWasm(arch: Arch) bool {
-                return switch (arch) {
+            pub fn isWasm(arch: *const Arch) bool {
+                return switch (arch.*) {
                     .wasm32, .wasm64 => true,
                     else => false,
                 };
             }
 
-            pub fn isRISCV(arch: Arch) bool {
-                return switch (arch) {
+            pub fn isRISCV(arch: *const Arch) bool {
+                return switch (arch.*) {
                     .riscv32, .riscv64 => true,
                     else => false,
                 };
             }
 
-            pub fn isMIPS(arch: Arch) bool {
-                return switch (arch) {
+            pub fn isMIPS(arch: *const Arch) bool {
+                return switch (arch.*) {
                     .mips, .mipsel, .mips64, .mips64el => true,
                     else => false,
                 };
             }
 
-            pub fn isPPC(arch: Arch) bool {
-                return switch (arch) {
+            pub fn isPPC(arch: *const Arch) bool {
+                return switch (arch.*) {
                     .powerpc, .powerpcle => true,
                     else => false,
                 };
             }
 
-            pub fn isPPC64(arch: Arch) bool {
-                return switch (arch) {
+            pub fn isPPC64(arch: *const Arch) bool {
+                return switch (arch.*) {
                     .powerpc64, .powerpc64le => true,
                     else => false,
                 };
             }
 
-            pub fn isSPARC(arch: Arch) bool {
-                return switch (arch) {
+            pub fn isSPARC(arch: *const Arch) bool {
+                return switch (arch.*) {
                     .sparc, .sparcel, .sparc64 => true,
                     else => false,
                 };
             }
 
-            pub fn isSPIRV(arch: Arch) bool {
-                return switch (arch) {
+            pub fn isSPIRV(arch: *const Arch) bool {
+                return switch (arch.*) {
                     .spirv32, .spirv64 => true,
                     else => false,
                 };
             }
 
-            pub fn isBpf(arch: Arch) bool {
-                return switch (arch) {
+            pub fn isBpf(arch: *const Arch) bool {
+                return switch (arch.*) {
                     .bpfel, .bpfeb => true,
                     else => false,
                 };
             }
 
-            pub fn isNvptx(arch: Arch) bool {
-                return switch (arch) {
+            pub fn isNvptx(arch: *const Arch) bool {
+                return switch (arch.*) {
                     .nvptx, .nvptx64 => true,
                     else => false,
                 };
             }
 
-            pub fn parseCpuModel(arch: Arch, cpu_name: []const u8) !*const Cpu.Model {
+            pub fn parseCpuModel(arch: *const Arch, cpu_name: []const u8) !*const Cpu.Model {
                 for (arch.allCpuModels()) |cpu| {
                     if (mem.eql(u8, cpu_name, cpu.name)) {
                         return cpu;
@@ -968,8 +968,8 @@ pub const Target = struct {
                 return error.UnknownCpuModel;
             }
 
-            pub fn toElfMachine(arch: Arch) std.elf.EM {
-                return switch (arch) {
+            pub fn toElfMachine(arch: *const Arch) std.elf.EM {
+                return switch (arch.*) {
                     .avr => .AVR,
                     .msp430 => .MSP430,
                     .arc => .ARC,
@@ -1032,8 +1032,8 @@ pub const Target = struct {
                 };
             }
 
-            pub fn toCoffMachine(arch: Arch) std.coff.MachineType {
-                return switch (arch) {
+            pub fn toCoffMachine(arch: *const Arch) std.coff.MachineType {
+                return switch (arch.*) {
                     .avr => .Unknown,
                     .msp430 => .Unknown,
                     .arc => .Unknown,
@@ -1096,8 +1096,8 @@ pub const Target = struct {
                 };
             }
 
-            pub fn endian(arch: Arch) std.builtin.Endian {
-                return switch (arch) {
+            pub fn endian(arch: *const Arch) std.builtin.Endian {
+                return switch (arch.*) {
                     .avr,
                     .arm,
                     .aarch64_32,
@@ -1166,18 +1166,18 @@ pub const Target = struct {
             }
 
             /// Returns whether this architecture supports the address space
-            pub fn supportsAddressSpace(arch: Arch, address_space: std.builtin.AddressSpace) bool {
-                const is_nvptx = arch == .nvptx or arch == .nvptx64;
+            pub fn supportsAddressSpace(arch: *const Arch, address_space: std.builtin.AddressSpace) bool {
+                const is_nvptx = arch.* == .nvptx or arch.* == .nvptx64;
                 return switch (address_space) {
                     .generic => true,
-                    .fs, .gs, .ss => arch == .x86_64 or arch == .i386,
-                    .global, .constant, .local, .shared => arch == .amdgcn or is_nvptx,
+                    .fs, .gs, .ss => arch.* == .x86_64 or arch.* == .i386,
+                    .global, .constant, .local, .shared => arch.* == .amdgcn or is_nvptx,
                     .param => is_nvptx,
                 };
             }
 
-            pub fn ptrBitWidth(arch: Arch) u16 {
-                switch (arch) {
+            pub fn ptrBitWidth(arch: *const Arch) u16 {
+                switch (arch.*) {
                     .avr,
                     .msp430,
                     .spu_2,
@@ -1247,8 +1247,8 @@ pub const Target = struct {
             }
 
             /// Returns a name that matches the lib/std/target/* source file name.
-            pub fn genericName(arch: Arch) []const u8 {
-                return switch (arch) {
+            pub fn genericName(arch: *const Arch) []const u8 {
+                return switch (arch.*) {
                     .arm, .armeb, .thumb, .thumbeb => "arm",
                     .aarch64, .aarch64_be, .aarch64_32 => "aarch64",
                     .bpfel, .bpfeb => "bpf",
@@ -1262,13 +1262,13 @@ pub const Target = struct {
                     .nvptx, .nvptx64 => "nvptx",
                     .wasm32, .wasm64 => "wasm",
                     .spirv32, .spirv64 => "spir-v",
-                    else => @tagName(arch),
+                    else => @tagName(arch.*),
                 };
             }
 
             /// All CPU features Zig is aware of, sorted lexicographically by name.
-            pub fn allFeaturesList(arch: Arch) []const Cpu.Feature {
-                return switch (arch) {
+            pub fn allFeaturesList(arch: *const Arch) []const Cpu.Feature {
+                return switch (arch.*) {
                     .arm, .armeb, .thumb, .thumbeb => &arm.all_features,
                     .aarch64, .aarch64_be, .aarch64_32 => &aarch64.all_features,
                     .avr => &avr.all_features,
@@ -1292,8 +1292,8 @@ pub const Target = struct {
             }
 
             /// All processors Zig is aware of, sorted lexicographically by name.
-            pub fn allCpuModels(arch: Arch) []const *const Cpu.Model {
-                return switch (arch) {
+            pub fn allCpuModels(arch: *const Arch) []const *const Cpu.Model {
+                return switch (arch.*) {
                     .arm, .armeb, .thumb, .thumbeb => comptime allCpusFromDecls(arm.cpu),
                     .aarch64, .aarch64_be, .aarch64_32 => comptime allCpusFromDecls(aarch64.cpu),
                     .avr => comptime allCpusFromDecls(avr.cpu),

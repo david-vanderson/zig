@@ -226,8 +226,8 @@ const FormValue = union(enum) {
     RangeListOffset: u64,
     data16: [16]u8,
 
-    fn getString(fv: FormValue, di: DwarfInfo) ![]const u8 {
-        switch (fv) {
+    fn getString(fv: *const FormValue, di: DwarfInfo) ![]const u8 {
+        switch (fv.*) {
             .String => |s| return s,
             .StrPtr => |off| return di.getString(off),
             .LineStrPtr => |off| return di.getLineString(off),
@@ -235,8 +235,8 @@ const FormValue = union(enum) {
         }
     }
 
-    fn getUInt(fv: FormValue, comptime U: type) !U {
-        switch (fv) {
+    fn getUInt(fv: *const FormValue, comptime U: type) !U {
+        switch (fv.*) {
             .Const => |c| {
                 const int = try c.asUnsignedLe();
                 return math.cast(U, int) orelse return badDwarf();
@@ -246,8 +246,8 @@ const FormValue = union(enum) {
         }
     }
 
-    fn getData16(fv: FormValue) ![16]u8 {
-        switch (fv) {
+    fn getData16(fv: *const FormValue) ![16]u8 {
+        switch (fv.*) {
             .data16 => |d| return d,
             else => return badDwarf(),
         }
@@ -258,7 +258,7 @@ const Constant = struct {
     payload: u64,
     signed: bool,
 
-    fn asUnsignedLe(self: Constant) !u64 {
+    fn asUnsignedLe(self: *const Constant) !u64 {
         if (self.signed) return badDwarf();
         return self.payload;
     }
@@ -1357,11 +1357,11 @@ pub const DwarfInfo = struct {
         return missingDwarf();
     }
 
-    fn getString(di: DwarfInfo, offset: u64) ![]const u8 {
+    fn getString(di: *const DwarfInfo, offset: u64) ![]const u8 {
         return getStringGeneric(di.debug_str, offset);
     }
 
-    fn getLineString(di: DwarfInfo, offset: u64) ![]const u8 {
+    fn getLineString(di: *const DwarfInfo, offset: u64) ![]const u8 {
         return getStringGeneric(di.debug_line_str, offset);
     }
 };

@@ -286,15 +286,15 @@ pub const Stat = extern struct {
     ctim: timespec,
     __unused: [3]isize,
 
-    pub fn atime(self: @This()) timespec {
+    pub fn atime(self: *const @This()) timespec {
         return self.atim;
     }
 
-    pub fn mtime(self: @This()) timespec {
+    pub fn mtime(self: *const @This()) timespec {
         return self.mtim;
     }
 
-    pub fn ctime(self: @This()) timespec {
+    pub fn ctime(self: *const @This()) timespec {
         return self.ctim;
     }
 };

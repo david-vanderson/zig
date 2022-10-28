@@ -150,23 +150,23 @@ pub fn PanicFree(comptime AllocatorType: type) type {
 }
 
 /// This function is not intended to be called except from within the implementation of an Allocator
-pub inline fn rawAlloc(self: Allocator, len: usize, ptr_align: u29, len_align: u29, ret_addr: usize) Error![]u8 {
+pub inline fn rawAlloc(self: *const Allocator, len: usize, ptr_align: u29, len_align: u29, ret_addr: usize) Error![]u8 {
     return self.vtable.alloc(self.ptr, len, ptr_align, len_align, ret_addr);
 }
 
 /// This function is not intended to be called except from within the implementation of an Allocator
-pub inline fn rawResize(self: Allocator, buf: []u8, buf_align: u29, new_len: usize, len_align: u29, ret_addr: usize) ?usize {
+pub inline fn rawResize(self: *const Allocator, buf: []u8, buf_align: u29, new_len: usize, len_align: u29, ret_addr: usize) ?usize {
     return self.vtable.resize(self.ptr, buf, buf_align, new_len, len_align, ret_addr);
 }
 
 /// This function is not intended to be called except from within the implementation of an Allocator
-pub inline fn rawFree(self: Allocator, buf: []u8, buf_align: u29, ret_addr: usize) void {
+pub inline fn rawFree(self: *const Allocator, buf: []u8, buf_align: u29, ret_addr: usize) void {
     return self.vtable.free(self.ptr, buf, buf_align, ret_addr);
 }
 
 /// Returns a pointer to undefined memory.
 /// Call `destroy` with the result to free the memory.
-pub fn create(self: Allocator, comptime T: type) Error!*T {
+pub fn create(self: *const Allocator, comptime T: type) Error!*T {
     if (@sizeOf(T) == 0) return @as(*T, undefined);
     const slice = try self.allocAdvancedWithRetAddr(T, null, 1, .exact, @returnAddress());
     return &slice[0];
@@ -174,7 +174,7 @@ pub fn create(self: Allocator, comptime T: type) Error!*T {
 
 /// `ptr` should be the return value of `create`, or otherwise
 /// have the same address and alignment property.
-pub fn destroy(self: Allocator, ptr: anytype) void {
+pub fn destroy(self: *const Allocator, ptr: anytype) void {
     const info = @typeInfo(@TypeOf(ptr)).Pointer;
     const T = info.child;
     if (@sizeOf(T) == 0) return;
@@ -190,12 +190,12 @@ pub fn destroy(self: Allocator, ptr: anytype) void {
 /// call `free` when done.
 ///
 /// For allocating a single item, see `create`.
-pub fn alloc(self: Allocator, comptime T: type, n: usize) Error![]T {
+pub fn alloc(self: *const Allocator, comptime T: type, n: usize) Error![]T {
     return self.allocAdvancedWithRetAddr(T, null, n, .exact, @returnAddress());
 }
 
 pub fn allocWithOptions(
-    self: Allocator,
+    self: *const Allocator,
     comptime Elem: type,
     n: usize,
     /// null means naturally aligned
@@ -206,7 +206,7 @@ pub fn allocWithOptions(
 }
 
 pub fn allocWithOptionsRetAddr(
-    self: Allocator,
+    self: *const Allocator,
     comptime Elem: type,
     n: usize,
     /// null means naturally aligned
@@ -240,7 +240,7 @@ fn AllocWithOptionsPayload(comptime Elem: type, comptime alignment: ?u29, compti
 ///
 /// For allocating a single item, see `create`.
 pub fn allocSentinel(
-    self: Allocator,
+    self: *const Allocator,
     comptime Elem: type,
     n: usize,
     comptime sentinel: Elem,
@@ -249,7 +249,7 @@ pub fn allocSentinel(
 }
 
 pub fn alignedAlloc(
-    self: Allocator,
+    self: *const Allocator,
     comptime T: type,
     /// null means naturally aligned
     comptime alignment: ?u29,
@@ -259,7 +259,7 @@ pub fn alignedAlloc(
 }
 
 pub fn allocAdvanced(
-    self: Allocator,
+    self: *const Allocator,
     comptime T: type,
     /// null means naturally aligned
     comptime alignment: ?u29,
@@ -272,7 +272,7 @@ pub fn allocAdvanced(
 pub const Exact = enum { exact, at_least };
 
 pub fn allocAdvancedWithRetAddr(
-    self: Allocator,
+    self: *const Allocator,
     comptime T: type,
     /// null means naturally aligned
     comptime alignment: ?u29,
@@ -314,7 +314,7 @@ pub fn allocAdvancedWithRetAddr(
 }
 
 /// Increases or decreases the size of an allocation. It is guaranteed to not move the pointer.
-pub fn resize(self: Allocator, old_mem: anytype, new_n: usize) ?@TypeOf(old_mem) {
+pub fn resize(self: *const Allocator, old_mem: anytype, new_n: usize) ?@TypeOf(old_mem) {
     const Slice = @typeInfo(@TypeOf(old_mem)).Pointer;
     const T = Slice.child;
     if (new_n == 0) {
@@ -339,7 +339,7 @@ pub fn resize(self: Allocator, old_mem: anytype, new_n: usize) ?@TypeOf(old_mem)
 /// in `std.ArrayList.shrink`.
 /// If you need guaranteed success, call `shrink`.
 /// If `new_n` is 0, this is the same as `free` and it always succeeds.
-pub fn realloc(self: Allocator, old_mem: anytype, new_n: usize) t: {
+pub fn realloc(self: *const Allocator, old_mem: anytype, new_n: usize) t: {
     const Slice = @typeInfo(@TypeOf(old_mem)).Pointer;
     break :t Error![]align(Slice.alignment) Slice.child;
 } {
@@ -347,7 +347,7 @@ pub fn realloc(self: Allocator, old_mem: anytype, new_n: usize) t: {
     return self.reallocAdvancedWithRetAddr(old_mem, old_alignment, new_n, .exact, @returnAddress());
 }
 
-pub fn reallocAtLeast(self: Allocator, old_mem: anytype, new_n: usize) t: {
+pub fn reallocAtLeast(self: *const Allocator, old_mem: anytype, new_n: usize) t: {
     const Slice = @typeInfo(@TypeOf(old_mem)).Pointer;
     break :t Error![]align(Slice.alignment) Slice.child;
 } {
@@ -359,7 +359,7 @@ pub fn reallocAtLeast(self: Allocator, old_mem: anytype, new_n: usize) t: {
 /// a new alignment, which can be larger, smaller, or the same as the old
 /// allocation.
 pub fn reallocAdvanced(
-    self: Allocator,
+    self: *const Allocator,
     old_mem: anytype,
     comptime new_alignment: u29,
     new_n: usize,
@@ -369,7 +369,7 @@ pub fn reallocAdvanced(
 }
 
 pub fn reallocAdvancedWithRetAddr(
-    self: Allocator,
+    self: *const Allocator,
     old_mem: anytype,
     comptime new_alignment: u29,
     new_n: usize,
@@ -425,7 +425,7 @@ pub fn reallocAdvancedWithRetAddr(
 /// Shrink always succeeds, and `new_n` must be <= `old_mem.len`.
 /// Returned slice has same alignment as old_mem.
 /// Shrinking to 0 is the same as calling `free`.
-pub fn shrink(self: Allocator, old_mem: anytype, new_n: usize) t: {
+pub fn shrink(self: *const Allocator, old_mem: anytype, new_n: usize) t: {
     const Slice = @typeInfo(@TypeOf(old_mem)).Pointer;
     break :t []align(Slice.alignment) Slice.child;
 } {
@@ -437,7 +437,7 @@ pub fn shrink(self: Allocator, old_mem: anytype, new_n: usize) t: {
 /// a new alignment, which must be smaller or the same as the old
 /// allocation.
 pub fn alignedShrink(
-    self: Allocator,
+    self: *const Allocator,
     old_mem: anytype,
     comptime new_alignment: u29,
     new_n: usize,
@@ -449,7 +449,7 @@ pub fn alignedShrink(
 /// the return address of the first stack frame, which may be relevant for
 /// allocators which collect stack traces.
 pub fn alignedShrinkWithRetAddr(
-    self: Allocator,
+    self: *const Allocator,
     old_mem: anytype,
     comptime new_alignment: u29,
     new_n: usize,
@@ -481,7 +481,7 @@ pub fn alignedShrinkWithRetAddr(
 
 /// Free an array allocated with `alloc`. To free a single item,
 /// see `destroy`.
-pub fn free(self: Allocator, memory: anytype) void {
+pub fn free(self: *const Allocator, memory: anytype) void {
     const Slice = @typeInfo(@TypeOf(memory)).Pointer;
     const bytes = mem.sliceAsBytes(memory);
     const bytes_len = bytes.len + if (Slice.sentinel != null) @sizeOf(Slice.child) else 0;
@@ -493,14 +493,14 @@ pub fn free(self: Allocator, memory: anytype) void {
 }
 
 /// Copies `m` to newly allocated memory. Caller owns the memory.
-pub fn dupe(allocator: Allocator, comptime T: type, m: []const T) ![]T {
+pub fn dupe(allocator: *const Allocator, comptime T: type, m: []const T) ![]T {
     const new_buf = try allocator.alloc(T, m.len);
     mem.copy(T, new_buf, m);
     return new_buf;
 }
 
 /// Copies `m` to newly allocated memory, with a null-terminated element. Caller owns the memory.
-pub fn dupeZ(allocator: Allocator, comptime T: type, m: []const T) ![:0]T {
+pub fn dupeZ(allocator: *const Allocator, comptime T: type, m: []const T) ![:0]T {
     const new_buf = try allocator.alloc(T, m.len + 1);
     mem.copy(T, new_buf, m);
     new_buf[m.len] = 0;
@@ -510,7 +510,7 @@ pub fn dupeZ(allocator: Allocator, comptime T: type, m: []const T) ![:0]T {
 /// This function allows a runtime `alignment` value. Callers should generally prefer
 /// to call the `alloc*` functions.
 pub fn allocBytes(
-    self: Allocator,
+    self: *const Allocator,
     /// Must be >= 1.
     /// Must be a power of 2.
     /// Returned slice's pointer will have this alignment.
@@ -712,7 +712,7 @@ test "reallocBytes" {
 /// This function allows a runtime `buf_align` value. Callers should generally prefer
 /// to call `shrink`.
 pub fn shrinkBytes(
-    self: Allocator,
+    self: *const Allocator,
     /// Must be the same as what was returned from most recent call to `allocFn` or `resizeFn`.
     buf: []u8,
     /// Must be the same as what was passed to `allocFn`.

@@ -1066,7 +1066,7 @@ pub const Dir = struct {
     /// To create a new file, see `createFile`.
     /// Call `File.close` to release the resource.
     /// Asserts that the path parameter has no null bytes.
-    pub fn openFile(self: Dir, sub_path: []const u8, flags: File.OpenFlags) File.OpenError!File {
+    pub fn openFile(self: *const Dir, sub_path: []const u8, flags: File.OpenFlags) File.OpenError!File {
         if (builtin.os.tag == .windows) {
             const path_w = try os.windows.sliceToPrefixedFileW(sub_path);
             return self.openFileW(path_w.span(), flags);
@@ -1079,7 +1079,7 @@ pub const Dir = struct {
     }
 
     /// Same as `openFile` but WASI only.
-    pub fn openFileWasi(self: Dir, sub_path: []const u8, flags: File.OpenFlags) File.OpenError!File {
+    pub fn openFileWasi(self: *const Dir, sub_path: []const u8, flags: File.OpenFlags) File.OpenError!File {
         const w = os.wasi;
         var fdflags: w.fdflags_t = 0x0;
         var base: w.rights_t = 0x0;
@@ -1111,7 +1111,7 @@ pub const Dir = struct {
     }
 
     /// Same as `openFile` but the path parameter is null-terminated.
-    pub fn openFileZ(self: Dir, sub_path: [*:0]const u8, flags: File.OpenFlags) File.OpenError!File {
+    pub fn openFileZ(self: *const Dir, sub_path: [*:0]const u8, flags: File.OpenFlags) File.OpenError!File {
         if (builtin.os.tag == .windows) {
             const path_w = try os.windows.cStrToPrefixedFileW(sub_path);
             return self.openFileW(path_w.span(), flags);
@@ -1194,7 +1194,7 @@ pub const Dir = struct {
 
     /// Same as `openFile` but Windows-only and the path parameter is
     /// [WTF-16](https://simonsapin.github.io/wtf-8/#potentially-ill-formed-utf-16) encoded.
-    pub fn openFileW(self: Dir, sub_path_w: []const u16, flags: File.OpenFlags) File.OpenError!File {
+    pub fn openFileW(self: *const Dir, sub_path_w: []const u16, flags: File.OpenFlags) File.OpenError!File {
         const w = os.windows;
         const file: File = .{
             .handle = try w.OpenFile(sub_path_w, .{
@@ -1234,7 +1234,7 @@ pub const Dir = struct {
     /// Creates, opens, or overwrites a file with write access.
     /// Call `File.close` on the result when done.
     /// Asserts that the path parameter has no null bytes.
-    pub fn createFile(self: Dir, sub_path: []const u8, flags: File.CreateFlags) File.OpenError!File {
+    pub fn createFile(self: *const Dir, sub_path: []const u8, flags: File.CreateFlags) File.OpenError!File {
         if (builtin.os.tag == .windows) {
             const path_w = try os.windows.sliceToPrefixedFileW(sub_path);
             return self.createFileW(path_w.span(), flags);
@@ -1247,7 +1247,7 @@ pub const Dir = struct {
     }
 
     /// Same as `createFile` but WASI only.
-    pub fn createFileWasi(self: Dir, sub_path: []const u8, flags: File.CreateFlags) File.OpenError!File {
+    pub fn createFileWasi(self: *const Dir, sub_path: []const u8, flags: File.CreateFlags) File.OpenError!File {
         const w = os.wasi;
         var oflags = w.O.CREAT;
         var base: w.rights_t = w.RIGHT.FD_WRITE |
@@ -1282,7 +1282,7 @@ pub const Dir = struct {
     }
 
     /// Same as `createFile` but the path parameter is null-terminated.
-    pub fn createFileZ(self: Dir, sub_path_c: [*:0]const u8, flags: File.CreateFlags) File.OpenError!File {
+    pub fn createFileZ(self: *const Dir, sub_path_c: [*:0]const u8, flags: File.CreateFlags) File.OpenError!File {
         if (builtin.os.tag == .windows) {
             const path_w = try os.windows.cStrToPrefixedFileW(sub_path_c);
             return self.createFileW(path_w.span(), flags);
@@ -1357,7 +1357,7 @@ pub const Dir = struct {
 
     /// Same as `createFile` but Windows-only and the path parameter is
     /// [WTF-16](https://simonsapin.github.io/wtf-8/#potentially-ill-formed-utf-16) encoded.
-    pub fn createFileW(self: Dir, sub_path_w: []const u16, flags: File.CreateFlags) File.OpenError!File {
+    pub fn createFileW(self: *const Dir, sub_path_w: []const u16, flags: File.CreateFlags) File.OpenError!File {
         const w = os.windows;
         const read_flag = if (flags.read) @as(u32, w.GENERIC_READ) else 0;
         const file: File = .{
@@ -1398,15 +1398,15 @@ pub const Dir = struct {
         return file;
     }
 
-    pub fn makeDir(self: Dir, sub_path: []const u8) !void {
+    pub fn makeDir(self: *const Dir, sub_path: []const u8) !void {
         try os.mkdirat(self.fd, sub_path, default_new_dir_mode);
     }
 
-    pub fn makeDirZ(self: Dir, sub_path: [*:0]const u8) !void {
+    pub fn makeDirZ(self: *const Dir, sub_path: [*:0]const u8) !void {
         try os.mkdiratZ(self.fd, sub_path, default_new_dir_mode);
     }
 
-    pub fn makeDirW(self: Dir, sub_path: [*:0]const u16) !void {
+    pub fn makeDirW(self: *const Dir, sub_path: [*:0]const u16) !void {
         try os.mkdiratW(self.fd, sub_path, default_new_dir_mode);
     }
 
@@ -1414,7 +1414,7 @@ pub const Dir = struct {
     /// already exists and is a directory.
     /// This function is not atomic, and if it returns an error, the file system may
     /// have been modified regardless.
-    pub fn makePath(self: Dir, sub_path: []const u8) !void {
+    pub fn makePath(self: *const Dir, sub_path: []const u8) !void {
         var end_index: usize = sub_path.len;
         while (true) {
             self.makeDir(sub_path[0..end_index]) catch |err| switch (err) {
@@ -1447,7 +1447,7 @@ pub const Dir = struct {
     /// This function performs `makePath`, followed by `openDir`.
     /// If supported by the OS, this operation is atomic. It is not atomic on
     /// all operating systems.
-    pub fn makeOpenPath(self: Dir, sub_path: []const u8, open_dir_options: OpenDirOptions) !Dir {
+    pub fn makeOpenPath(self: *const Dir, sub_path: []const u8, open_dir_options: OpenDirOptions) !Dir {
         // TODO improve this implementation on Windows; we can avoid 1 call to NtClose
         try self.makePath(sub_path);
         return self.openDir(sub_path, open_dir_options);
@@ -1456,7 +1456,7 @@ pub const Dir = struct {
     /// This function performs `makePath`, followed by `openIterableDir`.
     /// If supported by the OS, this operation is atomic. It is not atomic on
     /// all operating systems.
-    pub fn makeOpenPathIterable(self: Dir, sub_path: []const u8, open_dir_options: OpenDirOptions) !IterableDir {
+    pub fn makeOpenPathIterable(self: *const Dir, sub_path: []const u8, open_dir_options: OpenDirOptions) !IterableDir {
         // TODO improve this implementation on Windows; we can avoid 1 call to NtClose
         try self.makePath(sub_path);
         return self.openIterableDir(sub_path, open_dir_options);
@@ -1469,7 +1469,7 @@ pub const Dir = struct {
     /// This function is not universally supported by all platforms.
     /// Currently supported hosts are: Linux, macOS, and Windows.
     /// See also `Dir.realpathZ`, `Dir.realpathW`, and `Dir.realpathAlloc`.
-    pub fn realpath(self: Dir, pathname: []const u8, out_buffer: []u8) ![]u8 {
+    pub fn realpath(self: *const Dir, pathname: []const u8, out_buffer: []u8) ![]u8 {
         if (builtin.os.tag == .wasi) {
             if (self.fd == os.wasi.AT.FDCWD or path.isAbsolute(pathname)) {
                 var buffer: [MAX_PATH_BYTES]u8 = undefined;
@@ -1495,7 +1495,7 @@ pub const Dir = struct {
 
     /// Same as `Dir.realpath` except `pathname` is null-terminated.
     /// See also `Dir.realpath`, `realpathZ`.
-    pub fn realpathZ(self: Dir, pathname: [*:0]const u8, out_buffer: []u8) ![]u8 {
+    pub fn realpathZ(self: *const Dir, pathname: [*:0]const u8, out_buffer: []u8) ![]u8 {
         if (builtin.os.tag == .windows) {
             const pathname_w = try os.windows.cStrToPrefixedFileW(pathname);
             return self.realpathW(pathname_w.span(), out_buffer);
@@ -1528,7 +1528,7 @@ pub const Dir = struct {
 
     /// Windows-only. Same as `Dir.realpath` except `pathname` is WTF16 encoded.
     /// See also `Dir.realpath`, `realpathW`.
-    pub fn realpathW(self: Dir, pathname: []const u16, out_buffer: []u8) ![]u8 {
+    pub fn realpathW(self: *const Dir, pathname: []const u16, out_buffer: []u8) ![]u8 {
         const w = os.windows;
 
         const access_mask = w.GENERIC_READ | w.SYNCHRONIZE;
@@ -1580,7 +1580,7 @@ pub const Dir = struct {
 
     /// Same as `Dir.realpath` except caller must free the returned memory.
     /// See also `Dir.realpath`.
-    pub fn realpathAlloc(self: Dir, allocator: Allocator, pathname: []const u8) ![]u8 {
+    pub fn realpathAlloc(self: *const Dir, allocator: Allocator, pathname: []const u8) ![]u8 {
         // Use of MAX_PATH_BYTES here is valid as the realpath function does not
         // have a variant that takes an arbitrary-size buffer.
         // TODO(#4812): Consider reimplementing realpath or using the POSIX.1-2008
@@ -1598,7 +1598,7 @@ pub const Dir = struct {
     /// in, for example, implementing a shell, or child process execution.
     /// Not all targets support this. For example, WASI does not have the concept
     /// of a current working directory.
-    pub fn setAsCwd(self: Dir) !void {
+    pub fn setAsCwd(self: *const Dir) !void {
         if (builtin.os.tag == .wasi) {
             @compileError("changing cwd is not currently possible in WASI");
         }
@@ -1627,7 +1627,7 @@ pub const Dir = struct {
     /// open until `close` is called on the result.
     ///
     /// Asserts that the path parameter has no null bytes.
-    pub fn openDir(self: Dir, sub_path: []const u8, args: OpenDirOptions) OpenError!Dir {
+    pub fn openDir(self: *const Dir, sub_path: []const u8, args: OpenDirOptions) OpenError!Dir {
         if (builtin.os.tag == .windows) {
             const sub_path_w = try os.windows.sliceToPrefixedFileW(sub_path);
             return self.openDirW(sub_path_w.span().ptr, args, false);
@@ -1643,7 +1643,7 @@ pub const Dir = struct {
     /// open until `close` is called on the result.
     ///
     /// Asserts that the path parameter has no null bytes.
-    pub fn openIterableDir(self: Dir, sub_path: []const u8, args: OpenDirOptions) OpenError!IterableDir {
+    pub fn openIterableDir(self: *const Dir, sub_path: []const u8, args: OpenDirOptions) OpenError!IterableDir {
         if (builtin.os.tag == .windows) {
             const sub_path_w = try os.windows.sliceToPrefixedFileW(sub_path);
             return IterableDir{ .dir = try self.openDirW(sub_path_w.span().ptr, args, true) };
@@ -1656,7 +1656,7 @@ pub const Dir = struct {
     }
 
     /// Same as `openDir` except only WASI.
-    pub fn openDirWasi(self: Dir, sub_path: []const u8, args: OpenDirOptions) OpenError!Dir {
+    pub fn openDirWasi(self: *const Dir, sub_path: []const u8, args: OpenDirOptions) OpenError!Dir {
         const w = os.wasi;
         var base: w.rights_t = w.RIGHT.FD_FILESTAT_GET | w.RIGHT.FD_FDSTAT_SET_FLAGS | w.RIGHT.FD_FILESTAT_SET_TIMES;
         if (args.access_sub_paths) {
@@ -1704,7 +1704,7 @@ pub const Dir = struct {
     }
 
     /// Same as `openDir` except the parameter is null-terminated.
-    pub fn openDirZ(self: Dir, sub_path_c: [*:0]const u8, args: OpenDirOptions, iterable: bool) OpenError!Dir {
+    pub fn openDirZ(self: *const Dir, sub_path_c: [*:0]const u8, args: OpenDirOptions, iterable: bool) OpenError!Dir {
         if (builtin.os.tag == .windows) {
             const sub_path_w = try os.windows.cStrToPrefixedFileW(sub_path_c);
             return self.openDirW(sub_path_w.span().ptr, args, iterable);
@@ -1720,7 +1720,7 @@ pub const Dir = struct {
 
     /// Same as `openDir` except the path parameter is WTF-16 encoded, NT-prefixed.
     /// This function asserts the target OS is Windows.
-    pub fn openDirW(self: Dir, sub_path_w: [*:0]const u16, args: OpenDirOptions, iterable: bool) OpenError!Dir {
+    pub fn openDirW(self: *const Dir, sub_path_w: [*:0]const u16, args: OpenDirOptions, iterable: bool) OpenError!Dir {
         const w = os.windows;
         // TODO remove some of these flags if args.access_sub_paths is false
         const base_flags = w.STANDARD_RIGHTS_READ | w.FILE_READ_ATTRIBUTES | w.FILE_READ_EA |
@@ -1731,7 +1731,7 @@ pub const Dir = struct {
     }
 
     /// `flags` must contain `os.O.DIRECTORY`.
-    fn openDirFlagsZ(self: Dir, sub_path_c: [*:0]const u8, flags: u32) OpenError!Dir {
+    fn openDirFlagsZ(self: *const Dir, sub_path_c: [*:0]const u8, flags: u32) OpenError!Dir {
         const result = if (need_async_thread)
             std.event.Loop.instance.?.openatZ(self.fd, sub_path_c, flags, 0)
         else
@@ -1749,7 +1749,7 @@ pub const Dir = struct {
         return Dir{ .fd = fd };
     }
 
-    fn openDirAccessMaskW(self: Dir, sub_path_w: [*:0]const u16, access_mask: u32, no_follow: bool) OpenError!Dir {
+    fn openDirAccessMaskW(self: *const Dir, sub_path_w: [*:0]const u16, access_mask: u32, no_follow: bool) OpenError!Dir {
         const w = os.windows;
 
         var result = Dir{
@@ -1800,7 +1800,7 @@ pub const Dir = struct {
 
     /// Delete a file name and possibly the file it refers to, based on an open directory handle.
     /// Asserts that the path parameter has no null bytes.
-    pub fn deleteFile(self: Dir, sub_path: []const u8) DeleteFileError!void {
+    pub fn deleteFile(self: *const Dir, sub_path: []const u8) DeleteFileError!void {
         if (builtin.os.tag == .windows) {
             const sub_path_w = try os.windows.sliceToPrefixedFileW(sub_path);
             return self.deleteFileW(sub_path_w.span());
@@ -1816,7 +1816,7 @@ pub const Dir = struct {
     }
 
     /// Same as `deleteFile` except the parameter is null-terminated.
-    pub fn deleteFileZ(self: Dir, sub_path_c: [*:0]const u8) DeleteFileError!void {
+    pub fn deleteFileZ(self: *const Dir, sub_path_c: [*:0]const u8) DeleteFileError!void {
         os.unlinkatZ(self.fd, sub_path_c, 0) catch |err| switch (err) {
             error.DirNotEmpty => unreachable, // not passing AT.REMOVEDIR
             error.AccessDenied => |e| switch (builtin.os.tag) {
@@ -1835,7 +1835,7 @@ pub const Dir = struct {
     }
 
     /// Same as `deleteFile` except the parameter is WTF-16 encoded.
-    pub fn deleteFileW(self: Dir, sub_path_w: []const u16) DeleteFileError!void {
+    pub fn deleteFileW(self: *const Dir, sub_path_w: []const u16) DeleteFileError!void {
         os.unlinkatW(self.fd, sub_path_w, 0) catch |err| switch (err) {
             error.DirNotEmpty => unreachable, // not passing AT.REMOVEDIR
             else => |e| return e,
@@ -1861,7 +1861,7 @@ pub const Dir = struct {
     /// Returns `error.DirNotEmpty` if the directory is not empty.
     /// To delete a directory recursively, see `deleteTree`.
     /// Asserts that the path parameter has no null bytes.
-    pub fn deleteDir(self: Dir, sub_path: []const u8) DeleteDirError!void {
+    pub fn deleteDir(self: *const Dir, sub_path: []const u8) DeleteDirError!void {
         if (builtin.os.tag == .windows) {
             const sub_path_w = try os.windows.sliceToPrefixedFileW(sub_path);
             return self.deleteDirW(sub_path_w.span());
@@ -1877,7 +1877,7 @@ pub const Dir = struct {
     }
 
     /// Same as `deleteDir` except the parameter is null-terminated.
-    pub fn deleteDirZ(self: Dir, sub_path_c: [*:0]const u8) DeleteDirError!void {
+    pub fn deleteDirZ(self: *const Dir, sub_path_c: [*:0]const u8) DeleteDirError!void {
         os.unlinkatZ(self.fd, sub_path_c, os.AT.REMOVEDIR) catch |err| switch (err) {
             error.IsDir => unreachable, // not possible since we pass AT.REMOVEDIR
             else => |e| return e,
@@ -1886,7 +1886,7 @@ pub const Dir = struct {
 
     /// Same as `deleteDir` except the parameter is UTF16LE, NT prefixed.
     /// This function is Windows-only.
-    pub fn deleteDirW(self: Dir, sub_path_w: []const u16) DeleteDirError!void {
+    pub fn deleteDirW(self: *const Dir, sub_path_w: []const u16) DeleteDirError!void {
         os.unlinkatW(self.fd, sub_path_w, os.AT.REMOVEDIR) catch |err| switch (err) {
             error.IsDir => unreachable, // not possible since we pass AT.REMOVEDIR
             else => |e| return e,
@@ -1899,18 +1899,18 @@ pub const Dir = struct {
     /// If new_sub_path already exists, it will be replaced.
     /// Renaming a file over an existing directory or a directory
     /// over an existing file will fail with `error.IsDir` or `error.NotDir`
-    pub fn rename(self: Dir, old_sub_path: []const u8, new_sub_path: []const u8) RenameError!void {
+    pub fn rename(self: *const Dir, old_sub_path: []const u8, new_sub_path: []const u8) RenameError!void {
         return os.renameat(self.fd, old_sub_path, self.fd, new_sub_path);
     }
 
     /// Same as `rename` except the parameters are null-terminated.
-    pub fn renameZ(self: Dir, old_sub_path_z: [*:0]const u8, new_sub_path_z: [*:0]const u8) RenameError!void {
+    pub fn renameZ(self: *const Dir, old_sub_path_z: [*:0]const u8, new_sub_path_z: [*:0]const u8) RenameError!void {
         return os.renameatZ(self.fd, old_sub_path_z, self.fd, new_sub_path_z);
     }
 
     /// Same as `rename` except the parameters are UTF16LE, NT prefixed.
     /// This function is Windows-only.
-    pub fn renameW(self: Dir, old_sub_path_w: []const u16, new_sub_path_w: []const u16) RenameError!void {
+    pub fn renameW(self: *const Dir, old_sub_path_w: []const u16, new_sub_path_w: []const u16) RenameError!void {
         return os.renameatW(self.fd, old_sub_path_w, self.fd, new_sub_path_w);
     }
 
@@ -1919,7 +1919,7 @@ pub const Dir = struct {
     /// one; the latter case is known as a dangling link.
     /// If `sym_link_path` exists, it will not be overwritten.
     pub fn symLink(
-        self: Dir,
+        self: *const Dir,
         target_path: []const u8,
         sym_link_path: []const u8,
         flags: SymLinkFlags,
@@ -1939,7 +1939,7 @@ pub const Dir = struct {
 
     /// WASI-only. Same as `symLink` except targeting WASI.
     pub fn symLinkWasi(
-        self: Dir,
+        self: *const Dir,
         target_path: []const u8,
         sym_link_path: []const u8,
         _: SymLinkFlags,
@@ -1949,7 +1949,7 @@ pub const Dir = struct {
 
     /// Same as `symLink`, except the pathname parameters are null-terminated.
     pub fn symLinkZ(
-        self: Dir,
+        self: *const Dir,
         target_path_c: [*:0]const u8,
         sym_link_path_c: [*:0]const u8,
         flags: SymLinkFlags,
@@ -1965,7 +1965,7 @@ pub const Dir = struct {
     /// Windows-only. Same as `symLink` except the pathname parameters
     /// are null-terminated, WTF16 encoded.
     pub fn symLinkW(
-        self: Dir,
+        self: *const Dir,
         target_path_w: []const u16,
         sym_link_path_w: []const u16,
         flags: SymLinkFlags,
@@ -1976,7 +1976,7 @@ pub const Dir = struct {
     /// Read value of a symbolic link.
     /// The return value is a slice of `buffer`, from index `0`.
     /// Asserts that the path parameter has no null bytes.
-    pub fn readLink(self: Dir, sub_path: []const u8, buffer: []u8) ![]u8 {
+    pub fn readLink(self: *const Dir, sub_path: []const u8, buffer: []u8) ![]u8 {
         if (builtin.os.tag == .wasi and !builtin.link_libc) {
             return self.readLinkWasi(sub_path, buffer);
         }
@@ -1989,12 +1989,12 @@ pub const Dir = struct {
     }
 
     /// WASI-only. Same as `readLink` except targeting WASI.
-    pub fn readLinkWasi(self: Dir, sub_path: []const u8, buffer: []u8) ![]u8 {
+    pub fn readLinkWasi(self: *const Dir, sub_path: []const u8, buffer: []u8) ![]u8 {
         return os.readlinkat(self.fd, sub_path, buffer);
     }
 
     /// Same as `readLink`, except the `pathname` parameter is null-terminated.
-    pub fn readLinkZ(self: Dir, sub_path_c: [*:0]const u8, buffer: []u8) ![]u8 {
+    pub fn readLinkZ(self: *const Dir, sub_path_c: [*:0]const u8, buffer: []u8) ![]u8 {
         if (builtin.os.tag == .windows) {
             const sub_path_w = try os.windows.cStrToPrefixedFileW(sub_path_c);
             return self.readLinkW(sub_path_w.span(), buffer);
@@ -2004,7 +2004,7 @@ pub const Dir = struct {
 
     /// Windows-only. Same as `readLink` except the pathname parameter
     /// is null-terminated, WTF16 encoded.
-    pub fn readLinkW(self: Dir, sub_path_w: []const u16, buffer: []u8) ![]u8 {
+    pub fn readLinkW(self: *const Dir, sub_path_w: []const u16, buffer: []u8) ![]u8 {
         return os.windows.ReadLink(self.fd, sub_path_w, buffer);
     }
 
@@ -2013,7 +2013,7 @@ pub const Dir = struct {
     /// the situation is ambiguous. It could either mean that the entire file was read, and
     /// it exactly fits the buffer, or it could mean the buffer was not big enough for the
     /// entire file.
-    pub fn readFile(self: Dir, file_path: []const u8, buffer: []u8) ![]u8 {
+    pub fn readFile(self: *const Dir, file_path: []const u8, buffer: []u8) ![]u8 {
         var file = try self.openFile(file_path, .{});
         defer file.close();
 
@@ -2023,7 +2023,7 @@ pub const Dir = struct {
 
     /// On success, caller owns returned buffer.
     /// If the file is larger than `max_bytes`, returns `error.FileTooBig`.
-    pub fn readFileAlloc(self: Dir, allocator: mem.Allocator, file_path: []const u8, max_bytes: usize) ![]u8 {
+    pub fn readFileAlloc(self: *const Dir, allocator: mem.Allocator, file_path: []const u8, max_bytes: usize) ![]u8 {
         return self.readFileAllocOptions(allocator, file_path, max_bytes, null, @alignOf(u8), null);
     }
 
@@ -2033,7 +2033,7 @@ pub const Dir = struct {
     /// that value, otherwise the effective file size is used instead.
     /// Allows specifying alignment and a sentinel value.
     pub fn readFileAllocOptions(
-        self: Dir,
+        self: *const Dir,
         allocator: mem.Allocator,
         file_path: []const u8,
         max_bytes: usize,
@@ -2083,7 +2083,7 @@ pub const Dir = struct {
     /// removes it. If it cannot be removed because it is a non-empty directory,
     /// this function recursively removes its entries and then tries again.
     /// This operation is not atomic on most file systems.
-    pub fn deleteTree(self: Dir, sub_path: []const u8) DeleteTreeError!void {
+    pub fn deleteTree(self: *const Dir, sub_path: []const u8) DeleteTreeError!void {
         var initial_iterable_dir = (try self.deleteTreeOpenInitialSubpath(sub_path, .File)) orelse return;
 
         const StackItem = struct {
@@ -2101,7 +2101,7 @@ pub const Dir = struct {
 
         stack.appendAssumeCapacity(StackItem{
             .name = sub_path,
-            .parent_dir = self,
+            .parent_dir = self.*,
             .iter = initial_iterable_dir.iterateAssumeFirstIteration(),
         });
 
@@ -2268,11 +2268,11 @@ pub const Dir = struct {
 
     /// Like `deleteTree`, but only keeps one `Iterator` active at a time to minimize the function's stack size.
     /// This is slower than `deleteTree` but uses less stack space.
-    pub fn deleteTreeMinStackSize(self: Dir, sub_path: []const u8) DeleteTreeError!void {
+    pub fn deleteTreeMinStackSize(self: *const Dir, sub_path: []const u8) DeleteTreeError!void {
         return self.deleteTreeMinStackSizeWithKindHint(sub_path, .File);
     }
 
-    fn deleteTreeMinStackSizeWithKindHint(self: Dir, sub_path: []const u8, kind_hint: File.Kind) DeleteTreeError!void {
+    fn deleteTreeMinStackSizeWithKindHint(self: *const Dir, sub_path: []const u8, kind_hint: File.Kind) DeleteTreeError!void {
         start_over: while (true) {
             var iterable_dir = (try self.deleteTreeOpenInitialSubpath(sub_path, kind_hint)) orelse return;
             var cleanup_dir_parent: ?IterableDir = null;
@@ -2381,7 +2381,7 @@ pub const Dir = struct {
     }
 
     /// On successful delete, returns null.
-    fn deleteTreeOpenInitialSubpath(self: Dir, sub_path: []const u8, kind_hint: File.Kind) !?IterableDir {
+    fn deleteTreeOpenInitialSubpath(self: *const Dir, sub_path: []const u8, kind_hint: File.Kind) !?IterableDir {
         return iterable_dir: {
             // Treat as a file by default
             var treat_as_dir = kind_hint == .Directory;
@@ -2443,7 +2443,7 @@ pub const Dir = struct {
 
     /// Writes content to the file system, creating a new file if it does not exist, truncating
     /// if it already exists.
-    pub fn writeFile(self: Dir, sub_path: []const u8, data: []const u8) !void {
+    pub fn writeFile(self: *const Dir, sub_path: []const u8, data: []const u8) !void {
         var file = try self.createFile(sub_path, .{});
         defer file.close();
         try file.writeAll(data);
@@ -2456,7 +2456,7 @@ pub const Dir = struct {
     /// Be careful of Time-Of-Check-Time-Of-Use race conditions when using this function.
     /// For example, instead of testing if a file exists and then opening it, just
     /// open it and handle the error for file not found.
-    pub fn access(self: Dir, sub_path: []const u8, flags: File.OpenFlags) AccessError!void {
+    pub fn access(self: *const Dir, sub_path: []const u8, flags: File.OpenFlags) AccessError!void {
         if (builtin.os.tag == .windows) {
             const sub_path_w = try os.windows.sliceToPrefixedFileW(sub_path);
             return self.accessW(sub_path_w.span().ptr, flags);
@@ -2466,7 +2466,7 @@ pub const Dir = struct {
     }
 
     /// Same as `access` except the path parameter is null-terminated.
-    pub fn accessZ(self: Dir, sub_path: [*:0]const u8, flags: File.OpenFlags) AccessError!void {
+    pub fn accessZ(self: *const Dir, sub_path: [*:0]const u8, flags: File.OpenFlags) AccessError!void {
         if (builtin.os.tag == .windows) {
             const sub_path_w = try os.windows.cStrToPrefixedFileW(sub_path);
             return self.accessW(sub_path_w.span().ptr, flags);
@@ -2488,7 +2488,7 @@ pub const Dir = struct {
     /// * null-terminated
     /// * NtDll prefixed
     /// TODO currently this ignores `flags`.
-    pub fn accessW(self: Dir, sub_path_w: [*:0]const u16, flags: File.OpenFlags) AccessError!void {
+    pub fn accessW(self: *const Dir, sub_path_w: [*:0]const u16, flags: File.OpenFlags) AccessError!void {
         _ = flags;
         return os.faccessatW(self.fd, sub_path_w, 0, 0);
     }
@@ -2574,19 +2574,19 @@ pub const Dir = struct {
     /// to atomically replace `dest_path` with contents.
     /// Always call `AtomicFile.deinit` to clean up, regardless of whether `AtomicFile.finish` succeeded.
     /// `dest_path` must remain valid until `AtomicFile.deinit` is called.
-    pub fn atomicFile(self: Dir, dest_path: []const u8, options: AtomicFileOptions) !AtomicFile {
+    pub fn atomicFile(self: *const Dir, dest_path: []const u8, options: AtomicFileOptions) !AtomicFile {
         if (path.dirname(dest_path)) |dirname| {
             const dir = try self.openDir(dirname, .{});
             return AtomicFile.init(path.basename(dest_path), options.mode, dir, true);
         } else {
-            return AtomicFile.init(dest_path, options.mode, self, false);
+            return AtomicFile.init(dest_path, options.mode, self.*, false);
         }
     }
 
     pub const Stat = File.Stat;
     pub const StatError = File.StatError;
 
-    pub fn stat(self: Dir) StatError!Stat {
+    pub fn stat(self: *const Dir) StatError!Stat {
         const file: File = .{
             .handle = self.fd,
             .capable_io_mode = .blocking,
@@ -2597,7 +2597,7 @@ pub const Dir = struct {
     pub const StatFileError = File.OpenError || StatError;
 
     // TODO: improve this to use the fstatat syscall instead of making 2 syscalls here.
-    pub fn statFile(self: Dir, sub_path: []const u8) StatFileError!File.Stat {
+    pub fn statFile(self: *const Dir, sub_path: []const u8) StatFileError!File.Stat {
         var file = try self.openFile(sub_path, .{});
         defer file.close();
 
@@ -2609,7 +2609,7 @@ pub const Dir = struct {
 
     /// Sets permissions according to the provided `Permissions` struct.
     /// This method is *NOT* available on WASI
-    pub fn setPermissions(self: Dir, permissions: Permissions) SetPermissionsError!void {
+    pub fn setPermissions(self: *const Dir, permissions: Permissions) SetPermissionsError!void {
         const file: File = .{
             .handle = self.fd,
             .capable_io_mode = .blocking,
@@ -2621,7 +2621,7 @@ pub const Dir = struct {
     pub const MetadataError = File.MetadataError;
 
     /// Returns a `Metadata` struct, representing the permissions on the directory
-    pub fn metadata(self: Dir) MetadataError!Metadata {
+    pub fn metadata(self: *const Dir) MetadataError!Metadata {
         const file: File = .{
             .handle = self.fd,
             .capable_io_mode = .blocking,

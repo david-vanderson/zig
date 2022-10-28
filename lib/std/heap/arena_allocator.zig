@@ -15,10 +15,10 @@ pub const ArenaAllocator = struct {
         buffer_list: std.SinglyLinkedList([]u8) = @as(std.SinglyLinkedList([]u8), .{}),
         end_index: usize = 0,
 
-        pub fn promote(self: State, child_allocator: Allocator) ArenaAllocator {
+        pub fn promote(self: *const State, child_allocator: Allocator) ArenaAllocator {
             return .{
                 .child_allocator = child_allocator,
-                .state = self,
+                .state = self.*,
             };
         }
     };

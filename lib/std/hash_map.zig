@@ -447,7 +447,7 @@ pub fn HashMap(
         }
 
         /// Return the number of items in the map.
-        pub fn count(self: Self) Size {
+        pub fn count(self: *const Self) Size {
             return self.unmanaged.count();
         }
 
@@ -581,50 +581,50 @@ pub fn HashMap(
         }
 
         /// Finds the value associated with a key in the map
-        pub fn get(self: Self, key: K) ?V {
+        pub fn get(self: *const Self, key: K) ?V {
             return self.unmanaged.getContext(key, self.ctx);
         }
-        pub fn getAdapted(self: Self, key: anytype, ctx: anytype) ?V {
+        pub fn getAdapted(self: *const Self, key: anytype, ctx: anytype) ?V {
             return self.unmanaged.getAdapted(key, ctx);
         }
 
-        pub fn getPtr(self: Self, key: K) ?*V {
+        pub fn getPtr(self: *const Self, key: K) ?*V {
             return self.unmanaged.getPtrContext(key, self.ctx);
         }
-        pub fn getPtrAdapted(self: Self, key: anytype, ctx: anytype) ?*V {
+        pub fn getPtrAdapted(self: *const Self, key: anytype, ctx: anytype) ?*V {
             return self.unmanaged.getPtrAdapted(key, ctx);
         }
 
         /// Finds the actual key associated with an adapted key in the map
-        pub fn getKey(self: Self, key: K) ?K {
+        pub fn getKey(self: *const Self, key: K) ?K {
             return self.unmanaged.getKeyContext(key, self.ctx);
         }
-        pub fn getKeyAdapted(self: Self, key: anytype, ctx: anytype) ?K {
+        pub fn getKeyAdapted(self: *const Self, key: anytype, ctx: anytype) ?K {
             return self.unmanaged.getKeyAdapted(key, ctx);
         }
 
-        pub fn getKeyPtr(self: Self, key: K) ?*K {
+        pub fn getKeyPtr(self: *const Self, key: K) ?*K {
             return self.unmanaged.getKeyPtrContext(key, self.ctx);
         }
-        pub fn getKeyPtrAdapted(self: Self, key: anytype, ctx: anytype) ?*K {
+        pub fn getKeyPtrAdapted(self: *const Self, key: anytype, ctx: anytype) ?*K {
             return self.unmanaged.getKeyPtrAdapted(key, ctx);
         }
 
         /// Finds the key and value associated with a key in the map
-        pub fn getEntry(self: Self, key: K) ?Entry {
+        pub fn getEntry(self: *const Self, key: K) ?Entry {
             return self.unmanaged.getEntryContext(key, self.ctx);
         }
 
-        pub fn getEntryAdapted(self: Self, key: anytype, ctx: anytype) ?Entry {
+        pub fn getEntryAdapted(self: *const Self, key: anytype, ctx: anytype) ?Entry {
             return self.unmanaged.getEntryAdapted(key, ctx);
         }
 
         /// Check if the map contains a key
-        pub fn contains(self: Self, key: K) bool {
+        pub fn contains(self: *const Self, key: K) bool {
             return self.unmanaged.containsContext(key, self.ctx);
         }
 
-        pub fn containsAdapted(self: Self, key: anytype, ctx: anytype) bool {
+        pub fn containsAdapted(self: *const Self, key: anytype, ctx: anytype) bool {
             return self.unmanaged.containsAdapted(key, ctx);
         }
 
@@ -772,16 +772,16 @@ pub fn HashMapUnmanaged(
             const slot_free = @bitCast(u8, Metadata{ .fingerprint = free });
             const slot_tombstone = @bitCast(u8, Metadata{ .fingerprint = tombstone });
 
-            pub fn isUsed(self: Metadata) bool {
+            pub fn isUsed(self: *const Metadata) bool {
                 return self.used == 1;
             }
 
-            pub fn isTombstone(self: Metadata) bool {
-                return @bitCast(u8, self) == slot_tombstone;
+            pub fn isTombstone(self: *const Metadata) bool {
+                return @bitCast(u8, self.*) == slot_tombstone;
             }
 
-            pub fn isFree(self: Metadata) bool {
-                return @bitCast(u8, self) == slot_free;
+            pub fn isFree(self: *const Metadata) bool {
+                return @bitCast(u8, self.*) == slot_free;
             }
 
             pub fn takeFingerprint(hash: Hash) FingerPrint {
@@ -867,13 +867,13 @@ pub fn HashMapUnmanaged(
 
         pub const Managed = HashMap(K, V, Context, max_load_percentage);
 
-        pub fn promote(self: Self, allocator: Allocator) Managed {
+        pub fn promote(self: *const Self, allocator: Allocator) Managed {
             if (@sizeOf(Context) != 0)
                 @compileError("Cannot infer context " ++ @typeName(Context) ++ ", call promoteContext instead.");
             return promoteContext(self, allocator, undefined);
         }
 
-        pub fn promoteContext(self: Self, allocator: Allocator, ctx: Context) Managed {
+        pub fn promoteContext(self: *const Self, allocator: Allocator, ctx: Context) Managed {
             return .{
                 .unmanaged = self,
                 .allocator = allocator,
@@ -1023,7 +1023,7 @@ pub fn HashMapUnmanaged(
         pub fn putAssumeCapacityNoClobberContext(self: *Self, key: K, value: V, ctx: Context) void {
             assert(!self.containsContext(key, ctx));
 
-            const hash = ctx.hash(key);
+            const hash = @TypeOf(ctx).hash(ctx, key);
             const mask = self.capacity() - 1;
             var idx = @truncate(usize, hash & mask);
 
@@ -1119,7 +1119,7 @@ pub fn HashMapUnmanaged(
         /// fuse the basic blocks after the branch to the basic blocks
         /// from this function.  To encourage that, this function is
         /// marked as inline.
-        inline fn getIndex(self: Self, key: anytype, ctx: anytype) ?usize {
+        inline fn getIndex(self: *const Self, key: anytype, ctx: anytype) ?usize {
             comptime verifyContext(@TypeOf(ctx), @TypeOf(key), K, Hash, false);
 
             if (self.size == 0) {
@@ -1128,7 +1128,7 @@ pub fn HashMapUnmanaged(
 
             // If you get a compile error on this line, it means that your generic hash
             // function is invalid for these parameters.
-            const hash = ctx.hash(key);
+            const hash = @TypeOf(ctx).hash(ctx, key);
             // verifyContext can't verify the return type of generic hash functions,
             // so we need to double-check it here.
             if (@TypeOf(hash) != Hash) {
@@ -1146,7 +1146,7 @@ pub fn HashMapUnmanaged(
                     const test_key = &self.keys()[idx];
                     // If you get a compile error on this line, it means that your generic eql
                     // function is invalid for these parameters.
-                    const eql = ctx.eql(key, test_key.*);
+                    const eql = @TypeOf(ctx).eql(ctx, key, test_key.*);
                     // verifyContext can't verify the return type of generic eql functions,
                     // so we need to double-check it here.
                     if (@TypeOf(eql) != bool) {
@@ -1165,15 +1165,15 @@ pub fn HashMapUnmanaged(
             return null;
         }
 
-        pub fn getEntry(self: Self, key: K) ?Entry {
+        pub fn getEntry(self: *const Self, key: K) ?Entry {
             if (@sizeOf(Context) != 0)
                 @compileError("Cannot infer context " ++ @typeName(Context) ++ ", call getEntryContext instead.");
             return self.getEntryContext(key, undefined);
         }
-        pub fn getEntryContext(self: Self, key: K, ctx: Context) ?Entry {
+        pub fn getEntryContext(self: *const Self, key: K, ctx: Context) ?Entry {
             return self.getEntryAdapted(key, ctx);
         }
-        pub fn getEntryAdapted(self: Self, key: anytype, ctx: anytype) ?Entry {
+        pub fn getEntryAdapted(self: *const Self, key: anytype, ctx: anytype) ?Entry {
             if (self.getIndex(key, ctx)) |idx| {
                 return Entry{
                     .key_ptr = &self.keys()[idx],
@@ -1195,15 +1195,15 @@ pub fn HashMapUnmanaged(
         }
 
         /// Get an optional pointer to the actual key associated with adapted key, if present.
-        pub fn getKeyPtr(self: Self, key: K) ?*K {
+        pub fn getKeyPtr(self: *const Self, key: K) ?*K {
             if (@sizeOf(Context) != 0)
                 @compileError("Cannot infer context " ++ @typeName(Context) ++ ", call getKeyPtrContext instead.");
             return self.getKeyPtrContext(key, undefined);
         }
-        pub fn getKeyPtrContext(self: Self, key: K, ctx: Context) ?*K {
+        pub fn getKeyPtrContext(self: *const Self, key: K, ctx: Context) ?*K {
             return self.getKeyPtrAdapted(key, ctx);
         }
-        pub fn getKeyPtrAdapted(self: Self, key: anytype, ctx: anytype) ?*K {
+        pub fn getKeyPtrAdapted(self: *const Self, key: anytype, ctx: anytype) ?*K {
             if (self.getIndex(key, ctx)) |idx| {
                 return &self.keys()[idx];
             }
@@ -1211,15 +1211,15 @@ pub fn HashMapUnmanaged(
         }
 
         /// Get a copy of the actual key associated with adapted key, if present.
-        pub fn getKey(self: Self, key: K) ?K {
+        pub fn getKey(self: *const Self, key: K) ?K {
             if (@sizeOf(Context) != 0)
                 @compileError("Cannot infer context " ++ @typeName(Context) ++ ", call getKeyContext instead.");
             return self.getKeyContext(key, undefined);
         }
-        pub fn getKeyContext(self: Self, key: K, ctx: Context) ?K {
+        pub fn getKeyContext(self: *const Self, key: K, ctx: Context) ?K {
             return self.getKeyAdapted(key, ctx);
         }
-        pub fn getKeyAdapted(self: Self, key: anytype, ctx: anytype) ?K {
+        pub fn getKeyAdapted(self: *const Self, key: anytype, ctx: anytype) ?K {
             if (self.getIndex(key, ctx)) |idx| {
                 return self.keys()[idx];
             }
@@ -1227,15 +1227,15 @@ pub fn HashMapUnmanaged(
         }
 
         /// Get an optional pointer to the value associated with key, if present.
-        pub fn getPtr(self: Self, key: K) ?*V {
+        pub fn getPtr(self: *const Self, key: K) ?*V {
             if (@sizeOf(Context) != 0)
                 @compileError("Cannot infer context " ++ @typeName(Context) ++ ", call getPtrContext instead.");
             return self.getPtrContext(key, undefined);
         }
-        pub fn getPtrContext(self: Self, key: K, ctx: Context) ?*V {
+        pub fn getPtrContext(self: *const Self, key: K, ctx: Context) ?*V {
             return self.getPtrAdapted(key, ctx);
         }
-        pub fn getPtrAdapted(self: Self, key: anytype, ctx: anytype) ?*V {
+        pub fn getPtrAdapted(self: *const Self, key: anytype, ctx: anytype) ?*V {
             if (self.getIndex(key, ctx)) |idx| {
                 return &self.values()[idx];
             }
@@ -1243,15 +1243,15 @@ pub fn HashMapUnmanaged(
         }
 
         /// Get a copy of the value associated with key, if present.
-        pub fn get(self: Self, key: K) ?V {
+        pub fn get(self: *const Self, key: K) ?V {
             if (@sizeOf(Context) != 0)
                 @compileError("Cannot infer context " ++ @typeName(Context) ++ ", call getContext instead.");
             return self.getContext(key, undefined);
         }
-        pub fn getContext(self: Self, key: K, ctx: Context) ?V {
+        pub fn getContext(self: *const Self, key: K, ctx: Context) ?V {
             return self.getAdapted(key, ctx);
         }
-        pub fn getAdapted(self: Self, key: anytype, ctx: anytype) ?V {
+        pub fn getAdapted(self: *const Self, key: anytype, ctx: anytype) ?V {
             if (self.getIndex(key, ctx)) |idx| {
                 return self.values()[idx];
             }

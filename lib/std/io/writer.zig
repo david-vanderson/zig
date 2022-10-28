@@ -13,27 +13,27 @@ pub fn Writer(
         const Self = @This();
         pub const Error = WriteError;
 
-        pub fn write(self: Self, bytes: []const u8) Error!usize {
+        pub fn write(self: *const Self, bytes: []const u8) Error!usize {
             return writeFn(self.context, bytes);
         }
 
-        pub fn writeAll(self: Self, bytes: []const u8) Error!void {
+        pub fn writeAll(self: *const Self, bytes: []const u8) Error!void {
             var index: usize = 0;
             while (index != bytes.len) {
                 index += try self.write(bytes[index..]);
             }
         }
 
-        pub fn print(self: Self, comptime format: []const u8, args: anytype) Error!void {
-            return std.fmt.format(self, format, args);
+        pub fn print(self: *const Self, comptime format: []const u8, args: anytype) Error!void {
+            return std.fmt.format(self.*, format, args);
         }
 
-        pub fn writeByte(self: Self, byte: u8) Error!void {
+        pub fn writeByte(self: *const Self, byte: u8) Error!void {
             const array = [1]u8{byte};
             return self.writeAll(&array);
         }
 
-        pub fn writeByteNTimes(self: Self, byte: u8, n: usize) Error!void {
+        pub fn writeByteNTimes(self: *const Self, byte: u8, n: usize) Error!void {
             var bytes: [256]u8 = undefined;
             mem.set(u8, bytes[0..], byte);
 
@@ -47,7 +47,7 @@ pub fn Writer(
 
         /// Write a native-endian integer.
         /// TODO audit non-power-of-two int sizes
-        pub fn writeIntNative(self: Self, comptime T: type, value: T) Error!void {
+        pub fn writeIntNative(self: *const Self, comptime T: type, value: T) Error!void {
             var bytes: [(@typeInfo(T).Int.bits + 7) / 8]u8 = undefined;
             mem.writeIntNative(T, &bytes, value);
             return self.writeAll(&bytes);
@@ -55,34 +55,34 @@ pub fn Writer(
 
         /// Write a foreign-endian integer.
         /// TODO audit non-power-of-two int sizes
-        pub fn writeIntForeign(self: Self, comptime T: type, value: T) Error!void {
+        pub fn writeIntForeign(self: *const Self, comptime T: type, value: T) Error!void {
             var bytes: [(@typeInfo(T).Int.bits + 7) / 8]u8 = undefined;
             mem.writeIntForeign(T, &bytes, value);
             return self.writeAll(&bytes);
         }
 
         /// TODO audit non-power-of-two int sizes
-        pub fn writeIntLittle(self: Self, comptime T: type, value: T) Error!void {
+        pub fn writeIntLittle(self: *const Self, comptime T: type, value: T) Error!void {
             var bytes: [(@typeInfo(T).Int.bits + 7) / 8]u8 = undefined;
             mem.writeIntLittle(T, &bytes, value);
             return self.writeAll(&bytes);
         }
 
         /// TODO audit non-power-of-two int sizes
-        pub fn writeIntBig(self: Self, comptime T: type, value: T) Error!void {
+        pub fn writeIntBig(self: *const Self, comptime T: type, value: T) Error!void {
             var bytes: [(@typeInfo(T).Int.bits + 7) / 8]u8 = undefined;
             mem.writeIntBig(T, &bytes, value);
             return self.writeAll(&bytes);
         }
 
         /// TODO audit non-power-of-two int sizes
-        pub fn writeInt(self: Self, comptime T: type, value: T, endian: std.builtin.Endian) Error!void {
+        pub fn writeInt(self: *const Self, comptime T: type, value: T, endian: std.builtin.Endian) Error!void {
             var bytes: [(@typeInfo(T).Int.bits + 7) / 8]u8 = undefined;
             mem.writeInt(T, &bytes, value, endian);
             return self.writeAll(&bytes);
         }
 
-        pub fn writeStruct(self: Self, value: anytype) Error!void {
+        pub fn writeStruct(self: *const Self, value: anytype) Error!void {
             // Only extern and packed structs have defined in-memory layout.
             comptime assert(@typeInfo(@TypeOf(value)).Struct.layout != .Auto);
             return self.writeAll(mem.asBytes(&value));

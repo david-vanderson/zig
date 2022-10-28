@@ -16,19 +16,19 @@ pub fn SeekableStream(
         pub const SeekError = SeekErrorType;
         pub const GetSeekPosError = GetSeekPosErrorType;
 
-        pub fn seekTo(self: Self, pos: u64) SeekError!void {
+        pub fn seekTo(self: *const Self, pos: u64) SeekError!void {
             return seekToFn(self.context, pos);
         }
 
-        pub fn seekBy(self: Self, amt: i64) SeekError!void {
+        pub fn seekBy(self: *const Self, amt: i64) SeekError!void {
             return seekByFn(self.context, amt);
         }
 
-        pub fn getEndPos(self: Self) GetSeekPosError!u64 {
+        pub fn getEndPos(self: *const Self) GetSeekPosError!u64 {
             return getEndPosFn(self.context);
         }
 
-        pub fn getPos(self: Self) GetSeekPosError!u64 {
+        pub fn getPos(self: *const Self) GetSeekPosError!u64 {
             return getPosFn(self.context);
         }
     };

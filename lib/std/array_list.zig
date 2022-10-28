@@ -66,7 +66,7 @@ pub fn ArrayListAligned(comptime T: type, comptime alignment: ?u29) type {
         }
 
         /// Release all allocated memory.
-        pub fn deinit(self: Self) void {
+        pub fn deinit(self: *const Self) void {
             if (@sizeOf(T) > 0) {
                 self.allocator.free(self.allocatedSlice());
             }
@@ -430,7 +430,7 @@ pub fn ArrayListAligned(comptime T: type, comptime alignment: ?u29) type {
 
         /// Returns a slice of all the items plus the extra capacity, whose memory
         /// contents are `undefined`.
-        pub fn allocatedSlice(self: Self) Slice {
+        pub fn allocatedSlice(self: *const Self) Slice {
             // For a nicer API, `items.len` is the length, not the capacity.
             // This requires "unsafe" slicing.
             return self.items.ptr[0..self.capacity];
@@ -440,7 +440,7 @@ pub fn ArrayListAligned(comptime T: type, comptime alignment: ?u29) type {
         /// This can be useful for writing directly into an ArrayList.
         /// Note that such an operation must be followed up with a direct
         /// modification of `self.items.len`.
-        pub fn unusedCapacitySlice(self: Self) Slice {
+        pub fn unusedCapacitySlice(self: *const Self) Slice {
             return self.allocatedSlice()[self.items.len..];
         }
     };
@@ -819,7 +819,7 @@ pub fn ArrayListAlignedUnmanaged(comptime T: type, comptime alignment: ?u29) typ
 
         /// For a nicer API, `items.len` is the length, not the capacity.
         /// This requires "unsafe" slicing.
-        pub fn allocatedSlice(self: Self) Slice {
+        pub fn allocatedSlice(self: *const Self) Slice {
             return self.items.ptr[0..self.capacity];
         }
 
@@ -827,7 +827,7 @@ pub fn ArrayListAlignedUnmanaged(comptime T: type, comptime alignment: ?u29) typ
         /// This can be useful for writing directly into an ArrayList.
         /// Note that such an operation must be followed up with a direct
         /// modification of `self.items.len`.
-        pub fn unusedCapacitySlice(self: Self) Slice {
+        pub fn unusedCapacitySlice(self: *const Self) Slice {
             return self.allocatedSlice()[self.items.len..];
         }
     };
