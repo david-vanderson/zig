@@ -81,7 +81,7 @@ pub fn Field(comptime params: FieldParams) type {
         }
 
         /// Pack a field element.
-        pub fn toBytes(fe: Fe, endian: std.builtin.Endian) [encoded_length]u8 {
+        pub fn toBytes(fe: *const Fe, endian: std.builtin.Endian) [encoded_length]u8 {
             var limbs_z: NonMontgomeryDomainFieldElement = undefined;
             fiat.fromMontgomery(&limbs_z, fe.limbs);
             var s: [encoded_length]u8 = undefined;
@@ -100,25 +100,25 @@ pub fn Field(comptime params: FieldParams) type {
         }
 
         /// Return the field element as an integer.
-        pub fn toInt(fe: Fe) IntRepr {
+        pub fn toInt(fe: *const Fe) IntRepr {
             const s = fe.toBytes(.Little);
             return mem.readIntLittle(IntRepr, &s);
         }
 
         /// Return true if the field element is zero.
-        pub fn isZero(fe: Fe) bool {
+        pub fn isZero(fe: *const Fe) bool {
             var z: @TypeOf(fe.limbs[0]) = undefined;
             fiat.nonzero(&z, fe.limbs);
             return z == 0;
         }
 
         /// Return true if both field elements are equivalent.
-        pub fn equivalent(a: Fe, b: Fe) bool {
+        pub fn equivalent(a: *const Fe, b: Fe) bool {
             return a.sub(b).isZero();
         }
 
         /// Return true if the element is odd.
-        pub fn isOdd(fe: Fe) bool {
+        pub fn isOdd(fe: *const Fe) bool {
             const s = fe.toBytes(.Little);
             return @truncate(u1, s[0]) != 0;
         }
@@ -129,44 +129,44 @@ pub fn Field(comptime params: FieldParams) type {
         }
 
         /// Add field elements.
-        pub fn add(a: Fe, b: Fe) Fe {
+        pub fn add(a: *const Fe, b: Fe) Fe {
             var fe: Fe = undefined;
             fiat.add(&fe.limbs, a.limbs, b.limbs);
             return fe;
         }
 
         /// Subtract field elements.
-        pub fn sub(a: Fe, b: Fe) Fe {
+        pub fn sub(a: *const Fe, b: Fe) Fe {
             var fe: Fe = undefined;
             fiat.sub(&fe.limbs, a.limbs, b.limbs);
             return fe;
         }
 
         /// Double a field element.
-        pub fn dbl(a: Fe) Fe {
+        pub fn dbl(a: *const Fe) Fe {
             var fe: Fe = undefined;
             fiat.add(&fe.limbs, a.limbs, a.limbs);
             return fe;
         }
 
         /// Multiply field elements.
-        pub fn mul(a: Fe, b: Fe) Fe {
+        pub fn mul(a: *const Fe, b: Fe) Fe {
             var fe: Fe = undefined;
             fiat.mul(&fe.limbs, a.limbs, b.limbs);
             return fe;
         }
 
         /// Square a field element.
-        pub fn sq(a: Fe) Fe {
+        pub fn sq(a: *const Fe) Fe {
             var fe: Fe = undefined;
             fiat.square(&fe.limbs, a.limbs);
             return fe;
         }
 
         /// Square a field element n times.
-        fn sqn(a: Fe, comptime n: comptime_int) Fe {
+        fn sqn(a: *const Fe, comptime n: comptime_int) Fe {
             var i: usize = 0;
-            var fe = a;
+            var fe = a.*;
             while (i < n) : (i += 1) {
                 fe = fe.sq();
             }
@@ -174,10 +174,10 @@ pub fn Field(comptime params: FieldParams) type {
         }
 
         /// Compute a^n.
-        pub fn pow(a: Fe, comptime T: type, comptime n: T) Fe {
+        pub fn pow(a: *const Fe, comptime T: type, comptime n: T) Fe {
             var fe = one;
             var x: T = n;
-            var t = a;
+            var t = a.*;
             while (true) {
                 if (@truncate(u1, x) != 0) fe = fe.mul(t);
                 x >>= 1;
@@ -188,7 +188,7 @@ pub fn Field(comptime params: FieldParams) type {
         }
 
         /// Negate a field element.
-        pub fn neg(a: Fe) Fe {
+        pub fn neg(a: *const Fe) Fe {
             var fe: Fe = undefined;
             fiat.opp(&fe.limbs, a.limbs);
             return fe;
@@ -196,7 +196,7 @@ pub fn Field(comptime params: FieldParams) type {
 
         /// Return the inverse of a field element, or 0 if a=0.
         // Field inversion from https://eprint.iacr.org/2021/549.pdf
-        pub fn invert(a: Fe) Fe {
+        pub fn invert(a: *const Fe) Fe {
             const iterations = (49 * field_bits + 57) / 17;
             const Limbs = @TypeOf(a.limbs);
             const Word = @TypeOf(a.limbs[0]);
@@ -246,16 +246,16 @@ pub fn Field(comptime params: FieldParams) type {
         }
 
         /// Return true if the field element is a square.
-        pub fn isSquare(x2: Fe) bool {
+        pub fn isSquare(x2: *const Fe) bool {
             if (field_order == 115792089210356248762697446949407573530086143415290314195533631308867097853951) {
                 const t110 = x2.mul(x2.sq()).sq();
                 const t111 = x2.mul(t110);
                 const t111111 = t111.mul(x2.mul(t110).sqn(3));
                 const x15 = t111111.sqn(6).mul(t111111).sqn(3).mul(t111);
-                const x16 = x15.sq().mul(x2);
+                const x16 = x15.sq().mul(x2.*);
                 const x53 = x16.sqn(16).mul(x16).sqn(15);
                 const x47 = x15.mul(x53);
-                const ls = x47.mul(((x53.sqn(17).mul(x2)).sqn(143).mul(x47)).sqn(47)).sq().mul(x2);
+                const ls = x47.mul(((x53.sqn(17).mul(x2.*)).sqn(143).mul(x47)).sqn(47)).sq().mul(x2.*);
                 return ls.equivalent(Fe.one);
             } else if (field_order == 39402006196394479212279040100143613805079739270465446667948293404245721771496870329047266088258938001861606973112319) {
                 const t111 = x2.mul(x2.mul(x2.sq()).sq());
@@ -264,7 +264,7 @@ pub fn Field(comptime params: FieldParams) type {
                 const t1111111 = x2.mul(t1111110);
                 const x12 = t1111110.sqn(5).mul(t111111);
                 const x31 = x12.sqn(12).mul(x12).sqn(7).mul(t1111111);
-                const x32 = x31.sq().mul(x2);
+                const x32 = x31.sq().mul(x2.*);
                 const x63 = x32.sqn(31).mul(x31);
                 const x126 = x63.sqn(63).mul(x63);
                 const ls = x126.sqn(126).mul(x126).sqn(3).mul(t111).sqn(33).mul(x32).sqn(95).mul(x31);
@@ -276,14 +276,14 @@ pub fn Field(comptime params: FieldParams) type {
         }
 
         // x=x2^((field_order+1)/4) w/ field order=3 (mod 4).
-        fn uncheckedSqrt(x2: Fe) Fe {
+        fn uncheckedSqrt(x2: *const Fe) Fe {
             comptime debug.assert(field_order % 4 == 3);
             if (field_order == 115792089210356248762697446949407573530086143415290314195533631308867097853951) {
                 const t11 = x2.mul(x2.sq());
                 const t1111 = t11.mul(t11.sqn(2));
                 const t11111111 = t1111.mul(t1111.sqn(4));
                 const x16 = t11111111.sqn(8).mul(t11111111);
-                return x16.sqn(16).mul(x16).sqn(32).mul(x2).sqn(96).mul(x2).sqn(94);
+                return x16.sqn(16).mul(x16).sqn(32).mul(x2.*).sqn(96).mul(x2.*).sqn(94);
             } else if (field_order == 39402006196394479212279040100143613805079739270465446667948293404245721771496870329047266088258938001861606973112319) {
                 const t111 = x2.mul(x2.mul(x2.sq()).sq());
                 const t111111 = t111.mul(t111.sqn(3));
@@ -291,10 +291,10 @@ pub fn Field(comptime params: FieldParams) type {
                 const t1111111 = x2.mul(t1111110);
                 const x12 = t1111110.sqn(5).mul(t111111);
                 const x31 = x12.sqn(12).mul(x12).sqn(7).mul(t1111111);
-                const x32 = x31.sq().mul(x2);
+                const x32 = x31.sq().mul(x2.*);
                 const x63 = x32.sqn(31).mul(x31);
                 const x126 = x63.sqn(63).mul(x63);
-                return x126.sqn(126).mul(x126).sqn(3).mul(t111).sqn(33).mul(x32).sqn(64).mul(x2).sqn(30);
+                return x126.sqn(126).mul(x126).sqn(3).mul(t111).sqn(33).mul(x32).sqn(64).mul(x2.*).sqn(30);
             } else if (field_order == 115792089237316195423570985008687907853269984665640564039457584007908834671663) {
                 const t11 = x2.mul(x2.sq());
                 const t1111 = t11.mul(t11.sqn(2));
@@ -312,9 +312,9 @@ pub fn Field(comptime params: FieldParams) type {
         }
 
         /// Compute the square root of `x2`, returning `error.NotSquare` if `x2` was not a square.
-        pub fn sqrt(x2: Fe) NotSquareError!Fe {
+        pub fn sqrt(x2: *const Fe) NotSquareError!Fe {
             const x = x2.uncheckedSqrt();
-            if (x.sq().equivalent(x2)) {
+            if ((&x).sq().equivalent(x2.*)) {
                 return x;
             }
             return error.NotSquare;

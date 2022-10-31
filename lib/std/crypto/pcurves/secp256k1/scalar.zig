@@ -43,8 +43,8 @@ pub fn reduce64(s: [64]u8, endian: std.builtin.Endian) CompressedScalar {
 }
 
 /// Return a*b (mod L)
-pub fn mul(a: CompressedScalar, b: CompressedScalar, endian: std.builtin.Endian) NonCanonicalError!CompressedScalar {
-    return (try Scalar.fromBytes(a, endian)).mul(try Scalar.fromBytes(b, endian)).toBytes(endian);
+pub fn mul(a: *const CompressedScalar, b: CompressedScalar, endian: std.builtin.Endian) NonCanonicalError!CompressedScalar {
+    return (try Scalar.fromBytes(a.*, endian)).mul(try Scalar.fromBytes(b, endian)).toBytes(endian);
 }
 
 /// Return a*b+c (mod L)
@@ -100,7 +100,7 @@ pub const Scalar = struct {
     }
 
     /// Pack a scalar into bytes.
-    pub fn toBytes(n: Scalar, endian: std.builtin.Endian) CompressedScalar {
+    pub fn toBytes(n: *const Scalar, endian: std.builtin.Endian) CompressedScalar {
         return n.fe.toBytes(endian);
     }
 
@@ -115,7 +115,7 @@ pub const Scalar = struct {
     }
 
     /// Compute x+y (mod L)
-    pub fn add(x: Scalar, y: Scalar) Scalar {
+    pub fn add(x: *const Scalar, y: Scalar) Scalar {
         return Scalar{ .fe = x.fe.add(y.fe) };
     }
 
@@ -130,7 +130,7 @@ pub const Scalar = struct {
     }
 
     /// Compute x*y (mod L)
-    pub fn mul(x: Scalar, y: Scalar) Scalar {
+    pub fn mul(x: *const Scalar, y: Scalar) Scalar {
         return Scalar{ .fe = x.fe.mul(y.fe) };
     }
 
@@ -150,7 +150,7 @@ pub const Scalar = struct {
     }
 
     /// Compute x^-1 (mod L)
-    pub fn invert(n: Scalar) Scalar {
+    pub fn invert(n: *const Scalar) Scalar {
         return Scalar{ .fe = n.fe.invert() };
     }
 

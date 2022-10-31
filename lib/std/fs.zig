@@ -113,7 +113,7 @@ pub fn updateFileAbsolute(
     assert(path.isAbsolute(source_path));
     assert(path.isAbsolute(dest_path));
     const my_cwd = cwd();
-    return Dir.updateFile(my_cwd, source_path, my_cwd, dest_path, args);
+    return my_cwd.updateFile(source_path, my_cwd, dest_path, args);
 }
 
 /// Same as `Dir.copyFile`, except asserts that both `source_path` and `dest_path`
@@ -123,7 +123,7 @@ pub fn copyFileAbsolute(source_path: []const u8, dest_path: []const u8, args: Co
     assert(path.isAbsolute(source_path));
     assert(path.isAbsolute(dest_path));
     const my_cwd = cwd();
-    return Dir.copyFile(my_cwd, source_path, my_cwd, dest_path, args);
+    return my_cwd.copyFile(source_path, my_cwd, dest_path, args);
 }
 
 /// TODO update this API to avoid a getrandom syscall for every operation.
@@ -840,18 +840,18 @@ pub const IterableDir = struct {
         else => @compileError("unimplemented"),
     };
 
-    pub fn iterate(self: IterableDir) Iterator {
+    pub fn iterate(self: *const IterableDir) Iterator {
         return self.iterateImpl(true);
     }
 
     /// Like `iterate`, but will not reset the directory cursor before the first
     /// iteration. This should only be used in cases where it is known that the
     /// `IterableDir` has not had its cursor modified yet (e.g. it was just opened).
-    pub fn iterateAssumeFirstIteration(self: IterableDir) Iterator {
+    pub fn iterateAssumeFirstIteration(self: *const IterableDir) Iterator {
         return self.iterateImpl(false);
     }
 
-    fn iterateImpl(self: IterableDir, first_iter_start_value: bool) Iterator {
+    fn iterateImpl(self: *const IterableDir, first_iter_start_value: bool) Iterator {
         switch (builtin.os.tag) {
             .macos,
             .ios,
@@ -976,7 +976,7 @@ pub const IterableDir = struct {
     /// Must call `Walker.deinit` when done.
     /// The order of returned file system entries is undefined.
     /// `self` will not be closed after walking it.
-    pub fn walk(self: IterableDir, allocator: Allocator) !Walker {
+    pub fn walk(self: *const IterableDir, allocator: Allocator) !Walker {
         var name_buffer = std.ArrayList(u8).init(allocator);
         errdefer name_buffer.deinit();
 
@@ -1005,7 +1005,7 @@ pub const IterableDir = struct {
     /// The process must have the correct privileges in order to do this
     /// successfully, or must have the effective user ID matching the owner
     /// of the directory.
-    pub fn chmod(self: IterableDir, new_mode: File.Mode) ChmodError!void {
+    pub fn chmod(self: *const IterableDir, new_mode: File.Mode) ChmodError!void {
         const file: File = .{
             .handle = self.dir.fd,
             .capable_io_mode = .blocking,
@@ -1018,7 +1018,7 @@ pub const IterableDir = struct {
     /// successfully. The group may be changed by the owner of the directory to
     /// any group of which the owner is a member. If the
     /// owner or group is specified as `null`, the ID is not changed.
-    pub fn chown(self: IterableDir, owner: ?File.Uid, group: ?File.Gid) ChownError!void {
+    pub fn chown(self: *const IterableDir, owner: ?File.Uid, group: ?File.Gid) ChownError!void {
         const file: File = .{
             .handle = self.dir.fd,
             .capable_io_mode = .blocking,
@@ -2499,7 +2499,7 @@ pub const Dir = struct {
     /// Returns the previous status of the file before updating.
     /// If any of the directories do not exist for dest_path, they are created.
     pub fn updateFile(
-        source_dir: Dir,
+        source_dir: *const Dir,
         source_path: []const u8,
         dest_dir: Dir,
         dest_path: []const u8,
@@ -2548,7 +2548,7 @@ pub const Dir = struct {
     /// On Linux, until https://patchwork.kernel.org/patch/9636735/ is merged and readily available,
     /// there is a possibility of power loss or application termination leaving temporary files present
     /// in the same directory as dest_path.
-    pub fn copyFile(source_dir: Dir, source_path: []const u8, dest_dir: Dir, dest_path: []const u8, options: CopyFileOptions) CopyFileError!void {
+    pub fn copyFile(source_dir: *const Dir, source_path: []const u8, dest_dir: Dir, dest_path: []const u8, options: CopyFileOptions) CopyFileError!void {
         var in_file = try source_dir.openFile(source_path, .{});
         defer in_file.close();
 

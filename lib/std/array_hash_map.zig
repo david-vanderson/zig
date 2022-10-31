@@ -150,18 +150,18 @@ pub fn ArrayHashMap(
         }
 
         /// Returns the number of KV pairs stored in this map.
-        pub fn count(self: Self) usize {
+        pub fn count(self: *const Self) usize {
             return self.unmanaged.count();
         }
 
         /// Returns the backing array of keys in this map.
         /// Modifying the map may invalidate this array.
-        pub fn keys(self: Self) []K {
+        pub fn keys(self: *const Self) []K {
             return self.unmanaged.keys();
         }
         /// Returns the backing array of values in this map.
         /// Modifying the map may invalidate this array.
-        pub fn values(self: Self) []V {
+        pub fn values(self: *const Self) []V {
             return self.unmanaged.values();
         }
 
@@ -258,58 +258,58 @@ pub fn ArrayHashMap(
         }
 
         /// Finds pointers to the key and value storage associated with a key.
-        pub fn getEntry(self: Self, key: K) ?Entry {
+        pub fn getEntry(self: *const Self, key: K) ?Entry {
             return self.unmanaged.getEntryContext(key, self.ctx);
         }
-        pub fn getEntryAdapted(self: Self, key: anytype, ctx: anytype) ?Entry {
+        pub fn getEntryAdapted(self: *const Self, key: anytype, ctx: anytype) ?Entry {
             return self.unmanaged.getEntryAdapted(key, ctx);
         }
 
         /// Finds the index in the `entries` array where a key is stored
-        pub fn getIndex(self: Self, key: K) ?usize {
+        pub fn getIndex(self: *const Self, key: K) ?usize {
             return self.unmanaged.getIndexContext(key, self.ctx);
         }
-        pub fn getIndexAdapted(self: Self, key: anytype, ctx: anytype) ?usize {
+        pub fn getIndexAdapted(self: *const Self, key: anytype, ctx: anytype) ?usize {
             return self.unmanaged.getIndexAdapted(key, ctx);
         }
 
         /// Find the value associated with a key
-        pub fn get(self: Self, key: K) ?V {
+        pub fn get(self: *const Self, key: K) ?V {
             return self.unmanaged.getContext(key, self.ctx);
         }
-        pub fn getAdapted(self: Self, key: anytype, ctx: anytype) ?V {
+        pub fn getAdapted(self: *const Self, key: anytype, ctx: anytype) ?V {
             return self.unmanaged.getAdapted(key, ctx);
         }
 
         /// Find a pointer to the value associated with a key
-        pub fn getPtr(self: Self, key: K) ?*V {
+        pub fn getPtr(self: *const Self, key: K) ?*V {
             return self.unmanaged.getPtrContext(key, self.ctx);
         }
-        pub fn getPtrAdapted(self: Self, key: anytype, ctx: anytype) ?*V {
+        pub fn getPtrAdapted(self: *const Self, key: anytype, ctx: anytype) ?*V {
             return self.unmanaged.getPtrAdapted(key, ctx);
         }
 
         /// Find the actual key associated with an adapted key
-        pub fn getKey(self: Self, key: K) ?K {
+        pub fn getKey(self: *const Self, key: K) ?K {
             return self.unmanaged.getKeyContext(key, self.ctx);
         }
-        pub fn getKeyAdapted(self: Self, key: anytype, ctx: anytype) ?K {
+        pub fn getKeyAdapted(self: *const Self, key: anytype, ctx: anytype) ?K {
             return self.unmanaged.getKeyAdapted(key, ctx);
         }
 
         /// Find a pointer to the actual key associated with an adapted key
-        pub fn getKeyPtr(self: Self, key: K) ?*K {
+        pub fn getKeyPtr(self: *const Self, key: K) ?*K {
             return self.unmanaged.getKeyPtrContext(key, self.ctx);
         }
-        pub fn getKeyPtrAdapted(self: Self, key: anytype, ctx: anytype) ?*K {
+        pub fn getKeyPtrAdapted(self: *const Self, key: anytype, ctx: anytype) ?*K {
             return self.unmanaged.getKeyPtrAdapted(key, ctx);
         }
 
         /// Check whether a key is stored in the map
-        pub fn contains(self: Self, key: K) bool {
+        pub fn contains(self: *const Self, key: K) bool {
             return self.unmanaged.containsContext(key, self.ctx);
         }
-        pub fn containsAdapted(self: Self, key: anytype, ctx: anytype) bool {
+        pub fn containsAdapted(self: *const Self, key: anytype, ctx: anytype) bool {
             return self.unmanaged.containsAdapted(key, ctx);
         }
 
@@ -374,27 +374,27 @@ pub fn ArrayHashMap(
 
         /// Create a copy of the hash map which can be modified separately.
         /// The copy uses the same context and allocator as this instance.
-        pub fn clone(self: Self) !Self {
+        pub fn clone(self: *const Self) !Self {
             var other = try self.unmanaged.cloneContext(self.allocator, self.ctx);
             return other.promoteContext(self.allocator, self.ctx);
         }
         /// Create a copy of the hash map which can be modified separately.
         /// The copy uses the same context as this instance, but the specified
         /// allocator.
-        pub fn cloneWithAllocator(self: Self, allocator: Allocator) !Self {
+        pub fn cloneWithAllocator(self: *const Self, allocator: Allocator) !Self {
             var other = try self.unmanaged.cloneContext(allocator, self.ctx);
             return other.promoteContext(allocator, self.ctx);
         }
         /// Create a copy of the hash map which can be modified separately.
         /// The copy uses the same allocator as this instance, but the
         /// specified context.
-        pub fn cloneWithContext(self: Self, ctx: anytype) !ArrayHashMap(K, V, @TypeOf(ctx), store_hash) {
+        pub fn cloneWithContext(self: *const Self, ctx: anytype) !ArrayHashMap(K, V, @TypeOf(ctx), store_hash) {
             var other = try self.unmanaged.cloneContext(self.allocator, ctx);
             return other.promoteContext(self.allocator, ctx);
         }
         /// Create a copy of the hash map which can be modified separately.
         /// The copy uses the specified allocator and context.
-        pub fn cloneWithAllocatorAndContext(self: Self, allocator: Allocator, ctx: anytype) !ArrayHashMap(K, V, @TypeOf(ctx), store_hash) {
+        pub fn cloneWithAllocatorAndContext(self: *const Self, allocator: Allocator, ctx: anytype) !ArrayHashMap(K, V, @TypeOf(ctx), store_hash) {
             var other = try self.unmanaged.cloneContext(allocator, ctx);
             return other.promoteContext(allocator, ctx);
         }
@@ -541,14 +541,14 @@ pub fn ArrayHashMapUnmanaged(
 
         /// Convert from an unmanaged map to a managed map.  After calling this,
         /// the promoted map should no longer be used.
-        pub fn promote(self: Self, allocator: Allocator) Managed {
+        pub fn promote(self: *const Self, allocator: Allocator) Managed {
             if (@sizeOf(Context) != 0)
                 @compileError("Cannot infer context " ++ @typeName(Context) ++ ", call promoteContext instead.");
             return self.promoteContext(allocator, undefined);
         }
-        pub fn promoteContext(self: Self, allocator: Allocator, ctx: Context) Managed {
+        pub fn promoteContext(self: *const Self, allocator: Allocator, ctx: Context) Managed {
             return .{
-                .unmanaged = self,
+                .unmanaged = self.*,
                 .allocator = allocator,
                 .ctx = ctx,
             };
@@ -587,24 +587,24 @@ pub fn ArrayHashMapUnmanaged(
         }
 
         /// Returns the number of KV pairs stored in this map.
-        pub fn count(self: Self) usize {
+        pub fn count(self: *const Self) usize {
             return self.entries.len;
         }
 
         /// Returns the backing array of keys in this map.
         /// Modifying the map may invalidate this array.
-        pub fn keys(self: Self) []K {
+        pub fn keys(self: *const Self) []K {
             return self.entries.items(.key);
         }
         /// Returns the backing array of values in this map.
         /// Modifying the map may invalidate this array.
-        pub fn values(self: Self) []V {
+        pub fn values(self: *const Self) []V {
             return self.entries.items(.value);
         }
 
         /// Returns an iterator over the pairs in this map.
         /// Modifying the map may invalidate this iterator.
-        pub fn iterator(self: Self) Iterator {
+        pub fn iterator(self: *const Self) Iterator {
             const slice = self.entries.slice();
             return .{
                 .keys = slice.items(.key).ptr,
@@ -805,7 +805,7 @@ pub fn ArrayHashMapUnmanaged(
 
         /// Returns the number of total elements which may be present before it is
         /// no longer guaranteed that no allocations will be performed.
-        pub fn capacity(self: Self) usize {
+        pub fn capacity(self: *const Self) usize {
             const entry_cap = self.entries.capacity;
             const header = self.index_header orelse return math.min(linear_scan_max, entry_cap);
             const indexes_cap = header.capacity();
@@ -904,15 +904,15 @@ pub fn ArrayHashMapUnmanaged(
         }
 
         /// Finds pointers to the key and value storage associated with a key.
-        pub fn getEntry(self: Self, key: K) ?Entry {
+        pub fn getEntry(self: *const Self, key: K) ?Entry {
             if (@sizeOf(Context) != 0)
                 @compileError("Cannot infer context " ++ @typeName(Context) ++ ", call getEntryContext instead.");
             return self.getEntryContext(key, undefined);
         }
-        pub fn getEntryContext(self: Self, key: K, ctx: Context) ?Entry {
+        pub fn getEntryContext(self: *const Self, key: K, ctx: Context) ?Entry {
             return self.getEntryAdapted(key, ctx);
         }
-        pub fn getEntryAdapted(self: Self, key: anytype, ctx: anytype) ?Entry {
+        pub fn getEntryAdapted(self: *const Self, key: anytype, ctx: anytype) ?Entry {
             const index = self.getIndexAdapted(key, ctx) orelse return null;
             const slice = self.entries.slice();
             return Entry{
@@ -923,15 +923,15 @@ pub fn ArrayHashMapUnmanaged(
         }
 
         /// Finds the index in the `entries` array where a key is stored
-        pub fn getIndex(self: Self, key: K) ?usize {
+        pub fn getIndex(self: *const Self, key: K) ?usize {
             if (@sizeOf(Context) != 0)
                 @compileError("Cannot infer context " ++ @typeName(Context) ++ ", call getIndexContext instead.");
             return self.getIndexContext(key, undefined);
         }
-        pub fn getIndexContext(self: Self, key: K, ctx: Context) ?usize {
+        pub fn getIndexContext(self: *const Self, key: K, ctx: Context) ?usize {
             return self.getIndexAdapted(key, ctx);
         }
-        pub fn getIndexAdapted(self: Self, key: anytype, ctx: anytype) ?usize {
+        pub fn getIndexAdapted(self: *const Self, key: anytype, ctx: anytype) ?usize {
             const header = self.index_header orelse {
                 // Linear scan.
                 const h = if (store_hash) checkedHash(ctx, key) else {};
@@ -951,79 +951,79 @@ pub fn ArrayHashMapUnmanaged(
                 .u32 => return self.getIndexWithHeaderGeneric(key, ctx, header, u32),
             }
         }
-        fn getIndexWithHeaderGeneric(self: Self, key: anytype, ctx: anytype, header: *IndexHeader, comptime I: type) ?usize {
+        fn getIndexWithHeaderGeneric(self: *const Self, key: anytype, ctx: anytype, header: *IndexHeader, comptime I: type) ?usize {
             const indexes = header.indexes(I);
             const slot = self.getSlotByKey(key, ctx, header, I, indexes) orelse return null;
             return indexes[slot].entry_index;
         }
 
         /// Find the value associated with a key
-        pub fn get(self: Self, key: K) ?V {
+        pub fn get(self: *const Self, key: K) ?V {
             if (@sizeOf(Context) != 0)
                 @compileError("Cannot infer context " ++ @typeName(Context) ++ ", call getContext instead.");
             return self.getContext(key, undefined);
         }
-        pub fn getContext(self: Self, key: K, ctx: Context) ?V {
+        pub fn getContext(self: *const Self, key: K, ctx: Context) ?V {
             return self.getAdapted(key, ctx);
         }
-        pub fn getAdapted(self: Self, key: anytype, ctx: anytype) ?V {
+        pub fn getAdapted(self: *const Self, key: anytype, ctx: anytype) ?V {
             const index = self.getIndexAdapted(key, ctx) orelse return null;
             return self.values()[index];
         }
 
         /// Find a pointer to the value associated with a key
-        pub fn getPtr(self: Self, key: K) ?*V {
+        pub fn getPtr(self: *const Self, key: K) ?*V {
             if (@sizeOf(Context) != 0)
                 @compileError("Cannot infer context " ++ @typeName(Context) ++ ", call getPtrContext instead.");
             return self.getPtrContext(key, undefined);
         }
-        pub fn getPtrContext(self: Self, key: K, ctx: Context) ?*V {
+        pub fn getPtrContext(self: *const Self, key: K, ctx: Context) ?*V {
             return self.getPtrAdapted(key, ctx);
         }
-        pub fn getPtrAdapted(self: Self, key: anytype, ctx: anytype) ?*V {
+        pub fn getPtrAdapted(self: *const Self, key: anytype, ctx: anytype) ?*V {
             const index = self.getIndexAdapted(key, ctx) orelse return null;
             // workaround for #6974
             return if (@sizeOf(*V) == 0) @as(*V, undefined) else &self.values()[index];
         }
 
         /// Find the actual key associated with an adapted key
-        pub fn getKey(self: Self, key: K) ?K {
+        pub fn getKey(self: *const Self, key: K) ?K {
             if (@sizeOf(Context) != 0)
                 @compileError("Cannot infer context " ++ @typeName(Context) ++ ", call getKeyContext instead.");
             return self.getKeyContext(key, undefined);
         }
-        pub fn getKeyContext(self: Self, key: K, ctx: Context) ?K {
+        pub fn getKeyContext(self: *const Self, key: K, ctx: Context) ?K {
             return self.getKeyAdapted(key, ctx);
         }
-        pub fn getKeyAdapted(self: Self, key: anytype, ctx: anytype) ?K {
+        pub fn getKeyAdapted(self: *const Self, key: anytype, ctx: anytype) ?K {
             const index = self.getIndexAdapted(key, ctx) orelse return null;
             return self.keys()[index];
         }
 
         /// Find a pointer to the actual key associated with an adapted key
-        pub fn getKeyPtr(self: Self, key: K) ?*K {
+        pub fn getKeyPtr(self: *const Self, key: K) ?*K {
             if (@sizeOf(Context) != 0)
                 @compileError("Cannot infer context " ++ @typeName(Context) ++ ", call getKeyPtrContext instead.");
             return self.getKeyPtrContext(key, undefined);
         }
-        pub fn getKeyPtrContext(self: Self, key: K, ctx: Context) ?*K {
+        pub fn getKeyPtrContext(self: *const Self, key: K, ctx: Context) ?*K {
             return self.getKeyPtrAdapted(key, ctx);
         }
-        pub fn getKeyPtrAdapted(self: Self, key: anytype, ctx: anytype) ?*K {
+        pub fn getKeyPtrAdapted(self: *const Self, key: anytype, ctx: anytype) ?*K {
             const index = self.getIndexAdapted(key, ctx) orelse return null;
             return &self.keys()[index];
         }
 
         /// Check whether a key is stored in the map
-        pub fn contains(self: Self, key: K) bool {
+        pub fn contains(self: *const Self, key: K) bool {
             if (@sizeOf(Context) != 0)
                 @compileError("Cannot infer context " ++ @typeName(Context) ++ ", call containsContext instead.");
             return self.containsContext(key, undefined);
         }
-        pub fn containsContext(self: Self, key: K, ctx: Context) bool {
+        pub fn containsContext(self: *const Self, key: K, ctx: Context) bool {
             return self.containsAdapted(key, ctx);
         }
-        pub fn containsAdapted(self: Self, key: anytype, ctx: anytype) bool {
+        pub fn containsAdapted(self: *const Self, key: anytype, ctx: anytype) bool {
             return self.getIndexAdapted(key, ctx) != null;
         }
 
@@ -1138,12 +1138,12 @@ pub fn ArrayHashMapUnmanaged(
 
         /// Create a copy of the hash map which can be modified separately.
         /// The copy uses the same context and allocator as this instance.
-        pub fn clone(self: Self, allocator: Allocator) !Self {
+        pub fn clone(self: *const Self, allocator: Allocator) !Self {
             if (@sizeOf(ByIndexContext) != 0)
                 @compileError("Cannot infer context " ++ @typeName(Context) ++ ", call cloneContext instead.");
             return self.cloneContext(allocator, undefined);
         }
-        pub fn cloneContext(self: Self, allocator: Allocator, ctx: Context) !Self {
+        pub fn cloneContext(self: *const Self, allocator: Allocator, ctx: Context) !Self {
             var other: Self = .{};
             other.entries = try self.entries.clone(allocator);
             errdefer other.entries.deinit(allocator);
@@ -1574,7 +1574,7 @@ pub fn ArrayHashMapUnmanaged(
             unreachable;
         }
 
-        fn getSlotByKey(self: Self, key: anytype, ctx: anytype, header: *IndexHeader, comptime I: type, indexes: []Index(I)) ?usize {
+        fn getSlotByKey(self: *const Self, key: anytype, ctx: anytype, header: *IndexHeader, comptime I: type, indexes: []Index(I)) ?usize {
             const slice = self.entries.slice();
             const hashes_array = if (store_hash) slice.items(.hash) else {};
             const keys_array = slice.items(.key);
@@ -1650,7 +1650,7 @@ pub fn ArrayHashMapUnmanaged(
         inline fn checkedHash(ctx: anytype, key: anytype) u32 {
             comptime std.hash_map.verifyContext(@TypeOf(ctx), @TypeOf(key), K, u32, true);
             // If you get a compile error on the next line, it means that
-            const hash = ctx.hash(key); // your generic hash function doesn't accept your key
+            const hash = @TypeOf(ctx).hash(ctx, key); // your generic hash function doesn't accept your key
             if (@TypeOf(hash) != u32) {
                 @compileError("Context " ++ @typeName(@TypeOf(ctx)) ++ " has a generic hash function that returns the wrong type!\n" ++
                     @typeName(u32) ++ " was expected, but found " ++ @typeName(@TypeOf(hash)));
@@ -1660,7 +1660,7 @@ pub fn ArrayHashMapUnmanaged(
         inline fn checkedEql(ctx: anytype, a: anytype, b: K, b_index: usize) bool {
             comptime std.hash_map.verifyContext(@TypeOf(ctx), @TypeOf(a), K, u32, true);
             // If you get a compile error on the next line, it means that
-            const eql = ctx.eql(a, b, b_index); // your generic eql function doesn't accept (self, adapt key, K, index)
+            const eql = @TypeOf(ctx).eql(ctx, a, b, b_index); // your generic eql function doesn't accept (self, adapt key, K, index)
             if (@TypeOf(eql) != bool) {
                 @compileError("Context " ++ @typeName(@TypeOf(ctx)) ++ " has a generic eql function that returns the wrong type!\n" ++
                     @typeName(bool) ++ " was expected, but found " ++ @typeName(@TypeOf(eql)));
@@ -1668,12 +1668,12 @@ pub fn ArrayHashMapUnmanaged(
             return eql;
         }
 
-        fn dumpState(self: Self, comptime keyFmt: []const u8, comptime valueFmt: []const u8) void {
+        fn dumpState(self: *const Self, comptime keyFmt: []const u8, comptime valueFmt: []const u8) void {
             if (@sizeOf(ByIndexContext) != 0)
                 @compileError("Cannot infer context " ++ @typeName(Context) ++ ", call dumpStateContext instead.");
             self.dumpStateContext(keyFmt, valueFmt, undefined);
         }
-        fn dumpStateContext(self: Self, comptime keyFmt: []const u8, comptime valueFmt: []const u8, ctx: Context) void {
+        fn dumpStateContext(self: *const Self, comptime keyFmt: []const u8, comptime valueFmt: []const u8, ctx: Context) void {
             const p = std.debug.print;
             p("{s}:\n", .{@typeName(Self)});
             const slice = self.entries.slice();
@@ -1829,7 +1829,7 @@ const IndexHeader = struct {
     bit_index: u8 align(@alignOf(u32)),
 
     /// Map from an incrementing index to an index slot in the attached arrays.
-    fn constrainIndex(header: IndexHeader, i: usize) usize {
+    fn constrainIndex(header: *const IndexHeader, i: usize) usize {
         // This is an optimization for modulo of power of two integers;
         // it requires `indexes_len` to always be a power of two.
         return @intCast(usize, i & header.mask());
@@ -1843,17 +1843,17 @@ const IndexHeader = struct {
     }
 
     /// Returns the type used for the index arrays.
-    fn capacityIndexType(header: IndexHeader) CapacityIndexType {
+    fn capacityIndexType(header: *const IndexHeader) CapacityIndexType {
         return hash_map.capacityIndexType(header.bit_index);
     }
 
-    fn capacity(self: IndexHeader) u32 {
+    fn capacity(self: *const IndexHeader) u32 {
         return index_capacities[self.bit_index];
     }
-    fn length(self: IndexHeader) usize {
+    fn length(self: *const IndexHeader) usize {
         return @as(usize, 1) << @intCast(math.Log2Int(usize), self.bit_index);
     }
-    fn mask(self: IndexHeader) u32 {
+    fn mask(self: *const IndexHeader) u32 {
         return @intCast(u32, self.length() - 1);
     }
 
@@ -2271,7 +2271,7 @@ test "sort" {
     const C = struct {
         keys: []i32,
 
-        pub fn lessThan(ctx: @This(), a_index: usize, b_index: usize) bool {
+        pub fn lessThan(ctx: *const @This(), a_index: usize, b_index: usize) bool {
             return ctx.keys[a_index] < ctx.keys[b_index];
         }
     };

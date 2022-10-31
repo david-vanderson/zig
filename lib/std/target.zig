@@ -613,8 +613,8 @@ pub const Target = struct {
         /// Nvidia PTX format
         nvptx,
 
-        pub fn fileExt(of: ObjectFormat, cpu_arch: Cpu.Arch) [:0]const u8 {
-            return switch (of) {
+        pub fn fileExt(of: *const ObjectFormat, cpu_arch: Cpu.Arch) [:0]const u8 {
+            return switch (of.*) {
                 .coff => ".obj",
                 .elf, .macho, .wasm => ".o",
                 .c => ".c",
@@ -704,7 +704,7 @@ pub const Target = struct {
                     } else true;
                 }
 
-                pub fn isEnabled(set: Set, arch_feature_index: Index) bool {
+                pub fn isEnabled(set: *const Set, arch_feature_index: Index) bool {
                     const usize_index = arch_feature_index / @bitSizeOf(usize);
                     const bit_index = @intCast(ShiftInt, arch_feature_index % @bitSizeOf(usize));
                     return (set.ints[usize_index] & (@as(usize, 1) << bit_index)) != 0;
@@ -755,11 +755,11 @@ pub const Target = struct {
                     return @ptrCast(*const [byte_count]u8, &set.ints);
                 }
 
-                pub fn eql(set: Set, other_set: Set) bool {
+                pub fn eql(set: *const Set, other_set: Set) bool {
                     return mem.eql(usize, &set.ints, &other_set.ints);
                 }
 
-                pub fn isSuperSetOf(set: Set, other_set: Set) bool {
+                pub fn isSuperSetOf(set: *const Set, other_set: Set) bool {
                     const V = @Vector(usize_count, usize);
                     const set_v: V = set.ints;
                     const other_v: V = other_set.ints;
@@ -1401,7 +1401,7 @@ pub const Target = struct {
 
     pub const stack_align = 16;
 
-    pub fn zigTriple(self: Target, allocator: mem.Allocator) ![]u8 {
+    pub fn zigTriple(self: *const Target, allocator: mem.Allocator) ![]u8 {
         return std.zig.CrossTarget.fromTarget(self).zigTriple(allocator);
     }
 
@@ -1409,7 +1409,7 @@ pub const Target = struct {
         return std.fmt.allocPrint(allocator, "{s}-{s}-{s}", .{ @tagName(cpu_arch), @tagName(os_tag), @tagName(abi) });
     }
 
-    pub fn linuxTriple(self: Target, allocator: mem.Allocator) ![]u8 {
+    pub fn linuxTriple(self: *const Target, allocator: mem.Allocator) ![]u8 {
         return linuxTripleSimple(allocator, self.cpu.arch, self.os.tag, self.abi);
     }
 
@@ -1425,7 +1425,7 @@ pub const Target = struct {
         };
     }
 
-    pub fn exeFileExt(self: Target) [:0]const u8 {
+    pub fn exeFileExt(self: *const Target) [:0]const u8 {
         return exeFileExtSimple(self.cpu.arch, self.os.tag);
     }
 
@@ -1439,11 +1439,11 @@ pub const Target = struct {
         }
     }
 
-    pub fn staticLibSuffix(self: Target) [:0]const u8 {
+    pub fn staticLibSuffix(self: *const Target) [:0]const u8 {
         return staticLibSuffix_os_abi(self.os.tag, self.abi);
     }
 
-    pub fn dynamicLibSuffix(self: Target) [:0]const u8 {
+    pub fn dynamicLibSuffix(self: *const Target) [:0]const u8 {
         return self.os.tag.dynamicLibSuffix();
     }
 
@@ -1457,39 +1457,39 @@ pub const Target = struct {
         }
     }
 
-    pub fn libPrefix(self: Target) [:0]const u8 {
+    pub fn libPrefix(self: *const Target) [:0]const u8 {
         return libPrefix_os_abi(self.os.tag, self.abi);
     }
 
-    pub fn isMinGW(self: Target) bool {
+    pub fn isMinGW(self: *const Target) bool {
         return self.os.tag == .windows and self.isGnu();
     }
 
-    pub fn isGnu(self: Target) bool {
+    pub fn isGnu(self: *const Target) bool {
         return self.abi.isGnu();
     }
 
-    pub fn isMusl(self: Target) bool {
+    pub fn isMusl(self: *const Target) bool {
         return self.abi.isMusl();
     }
 
-    pub fn isAndroid(self: Target) bool {
+    pub fn isAndroid(self: *const Target) bool {
         return self.abi == .android;
     }
 
-    pub fn isWasm(self: Target) bool {
+    pub fn isWasm(self: *const Target) bool {
         return self.cpu.arch.isWasm();
     }
 
-    pub fn isDarwin(self: Target) bool {
+    pub fn isDarwin(self: *const Target) bool {
         return self.os.tag.isDarwin();
     }
 
-    pub fn isBSD(self: Target) bool {
+    pub fn isBSD(self: *const Target) bool {
         return self.os.tag.isBSD();
     }
 
-    pub fn isBpfFreestanding(self: Target) bool {
+    pub fn isBpfFreestanding(self: *const Target) bool {
         return self.cpu.arch.isBpf() and self.os.tag == .freestanding;
     }
 
@@ -1497,11 +1497,11 @@ pub const Target = struct {
         return os_tag == .linux and abi.isGnu();
     }
 
-    pub fn isGnuLibC(self: Target) bool {
+    pub fn isGnuLibC(self: *const Target) bool {
         return isGnuLibC_os_tag_abi(self.os.tag, self.abi);
     }
 
-    pub fn supportsNewStackCall(self: Target) bool {
+    pub fn supportsNewStackCall(self: *const Target) bool {
         return !self.cpu.arch.isWasm();
     }
 
@@ -1511,11 +1511,11 @@ pub const Target = struct {
         soft_fp,
     };
 
-    pub fn getFloatAbi(self: Target) FloatAbi {
+    pub fn getFloatAbi(self: *const Target) FloatAbi {
         return self.abi.floatAbi();
     }
 
-    pub fn hasDynamicLinker(self: Target) bool {
+    pub fn hasDynamicLinker(self: *const Target) bool {
         if (self.cpu.arch.isWasm()) {
             return false;
         }
@@ -1571,7 +1571,7 @@ pub const Target = struct {
         }
     };
 
-    pub fn standardDynamicLinkerPath(self: Target) DynamicLinker {
+    pub fn standardDynamicLinkerPath(self: *const Target) DynamicLinker {
         var result: DynamicLinker = .{};
         const S = struct {
             fn print(r: *DynamicLinker, comptime fmt: []const u8, args: anytype) DynamicLinker {

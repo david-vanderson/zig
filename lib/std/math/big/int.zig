@@ -135,7 +135,7 @@ pub const Mutable = struct {
     len: usize,
     positive: bool,
 
-    pub fn toConst(self: Mutable) Const {
+    pub fn toConst(self: *const Mutable) Const {
         return .{
             .limbs = self.limbs[0..self.len],
             .positive = self.positive,
@@ -143,13 +143,13 @@ pub const Mutable = struct {
     }
 
     /// Returns true if `a == 0`.
-    pub fn eqZero(self: Mutable) bool {
+    pub fn eqZero(self: *const Mutable) bool {
         return self.toConst().eqZero();
     }
 
     /// Asserts that the allocator owns the limbs memory. If this is not the case,
     /// use `toConst().toManaged()`.
-    pub fn toManaged(self: Mutable, allocator: Allocator) Managed {
+    pub fn toManaged(self: *const Mutable, allocator: Allocator) Managed {
         return .{
             .allocator = allocator,
             .limbs = self.limbs,
@@ -190,7 +190,7 @@ pub const Mutable = struct {
         mem.swap(Mutable, self, other);
     }
 
-    pub fn dump(self: Mutable) void {
+    pub fn dump(self: *const Mutable) void {
         for (self.limbs[0..self.len]) |limb| {
             std.debug.print("{x} ", .{limb});
         }
@@ -1877,7 +1877,7 @@ pub const Const = struct {
     positive: bool,
 
     /// The result is an independent resource which is managed by the caller.
-    pub fn toManaged(self: Const, allocator: Allocator) Allocator.Error!Managed {
+    pub fn toManaged(self: *const Const, allocator: Allocator) Allocator.Error!Managed {
         const limbs = try allocator.alloc(Limb, math.max(Managed.default_capacity, self.limbs.len));
         mem.copy(Limb, limbs, self.limbs);
         return Managed{
@@ -1891,7 +1891,7 @@ pub const Const = struct {
     }
 
     /// Asserts `limbs` is big enough to store the value.
-    pub fn toMutable(self: Const, limbs: []Limb) Mutable {
+    pub fn toMutable(self: *const Const, limbs: []Limb) Mutable {
         mem.copy(Limb, limbs, self.limbs[0..self.limbs.len]);
         return .{
             .limbs = limbs,
@@ -1900,37 +1900,37 @@ pub const Const = struct {
         };
     }
 
-    pub fn dump(self: Const) void {
+    pub fn dump(self: *const Const) void {
         for (self.limbs[0..self.limbs.len]) |limb| {
             std.debug.print("{x} ", .{limb});
         }
         std.debug.print("positive={}\n", .{self.positive});
     }
 
-    pub fn abs(self: Const) Const {
+    pub fn abs(self: *const Const) Const {
         return .{
             .limbs = self.limbs,
             .positive = true,
         };
     }
 
-    pub fn negate(self: Const) Const {
+    pub fn negate(self: *const Const) Const {
         return .{
             .limbs = self.limbs,
             .positive = !self.positive,
         };
     }
 
-    pub fn isOdd(self: Const) bool {
+    pub fn isOdd(self: *const Const) bool {
         return self.limbs[0] & 1 != 0;
     }
 
-    pub fn isEven(self: Const) bool {
+    pub fn isEven(self: *const Const) bool {
         return !self.isOdd();
     }
 
     /// Returns the number of bits required to represent the absolute value of an integer.
-    pub fn bitCountAbs(self: Const) usize {
+    pub fn bitCountAbs(self: *const Const) usize {
         return (self.limbs.len - 1) * limb_bits + (limb_bits - @clz(self.limbs[self.limbs.len - 1]));
     }
 
@@ -1942,7 +1942,7 @@ pub const Const = struct {
     /// one greater than the returned value.
     ///
     /// e.g. -127 returns 8 as it will fit in an i8. 127 returns 7 since it fits in a u7.
-    pub fn bitCountTwosComp(self: Const) usize {
+    pub fn bitCountTwosComp(self: *const Const) usize {
         var bits = self.bitCountAbs();
 
         // If the entire value has only one bit set (e.g. 0b100000000) then the negation in twos
@@ -1964,7 +1964,7 @@ pub const Const = struct {
         return bits;
     }
 
-    pub fn fitsInTwosComp(self: Const, signedness: Signedness, bit_count: usize) bool {
+    pub fn fitsInTwosComp(self: *const Const, signedness: Signedness, bit_count: usize) bool {
         if (self.eqZero()) {
             return true;
         }
@@ -1977,7 +1977,7 @@ pub const Const = struct {
     }
 
     /// Returns whether self can fit into an integer of the requested type.
-    pub fn fits(self: Const, comptime T: type) bool {
+    pub fn fits(self: *const Const, comptime T: type) bool {
         const info = @typeInfo(T).Int;
         return self.fitsInTwosComp(info.signedness, info.bits);
     }
@@ -1986,7 +1986,7 @@ pub const Const = struct {
     /// the minus sign. This is used for determining the number of characters needed to print the
     /// value. It is inexact and may exceed the given value by ~1-2 bytes.
     /// TODO See if we can make this exact.
-    pub fn sizeInBaseUpperBound(self: Const, base: usize) usize {
+    pub fn sizeInBaseUpperBound(self: *const Const, base: usize) usize {
         const bit_count = @as(usize, @boolToInt(!self.positive)) + self.bitCountAbs();
         return (bit_count / math.log2(base)) + 2;
     }
@@ -1999,7 +1999,7 @@ pub const Const = struct {
     /// Convert self to type T.
     ///
     /// Returns an error if self cannot be narrowed into the requested type without truncation.
-    pub fn to(self: Const, comptime T: type) ConvertError!T {
+    pub fn to(self: *const Const, comptime T: type) ConvertError!T {
         switch (@typeInfo(T)) {
             .Int => |info| {
                 const UT = std.meta.Int(.unsigned, info.bits);
@@ -2044,7 +2044,7 @@ pub const Const = struct {
     /// This is because the rendering algorithm requires reversing a string, which requires O(N) memory.
     /// See `toString` and `toStringAlloc` for a way to print big integers without failure.
     pub fn format(
-        self: Const,
+        self: *const Const,
         comptime fmt: []const u8,
         options: std.fmt.FormatOptions,
         out_stream: anytype,
@@ -2090,7 +2090,7 @@ pub const Const = struct {
     /// Caller owns returned memory.
     /// Asserts that `base` is in the range [2, 16].
     /// See also `toString`, a lower level function than this.
-    pub fn toStringAlloc(self: Const, allocator: Allocator, base: u8, case: std.fmt.Case) Allocator.Error![]u8 {
+    pub fn toStringAlloc(self: *const Const, allocator: Allocator, base: u8, case: std.fmt.Case) Allocator.Error![]u8 {
         assert(base >= 2);
         assert(base <= 16);
 
@@ -2115,7 +2115,7 @@ pub const Const = struct {
     /// length of at least `calcToStringLimbsBufferLen`.
     /// In the case of power-of-two base, `limbs_buffer` is ignored.
     /// See also `toStringAlloc`, a higher level function than this.
-    pub fn toString(self: Const, string: []u8, base: u8, case: std.fmt.Case, limbs_buffer: []Limb) usize {
+    pub fn toString(self: *const Const, string: []u8, base: u8, case: std.fmt.Case, limbs_buffer: []Limb) usize {
         assert(base >= 2);
         assert(base <= 16);
 
@@ -2334,20 +2334,20 @@ pub const Const = struct {
     }
 
     /// Returns true if `a == 0`.
-    pub fn eqZero(a: Const) bool {
+    pub fn eqZero(a: *const Const) bool {
         var d: Limb = 0;
         for (a.limbs) |limb| d |= limb;
         return d == 0;
     }
 
     /// Returns true if `|a| == |b|`.
-    pub fn eqAbs(a: Const, b: Const) bool {
-        return orderAbs(a, b) == .eq;
+    pub fn eqAbs(a: *const Const, b: Const) bool {
+        return orderAbs(a.*, b) == .eq;
     }
 
     /// Returns true if `a == b`.
-    pub fn eq(a: Const, b: Const) bool {
-        return order(a, b) == .eq;
+    pub fn eq(a: *const Const, b: Const) bool {
+        return order(a.*, b) == .eq;
     }
 };
 
@@ -2383,7 +2383,7 @@ pub const Managed = struct {
         return initCapacity(allocator, default_capacity);
     }
 
-    pub fn toMutable(self: Managed) Mutable {
+    pub fn toMutable(self: *const Managed) Mutable {
         return .{
             .limbs = self.limbs,
             .positive = self.isPositive(),
@@ -2391,7 +2391,7 @@ pub const Managed = struct {
         };
     }
 
-    pub fn toConst(self: Managed) Const {
+    pub fn toConst(self: *const Managed) Const {
         return .{
             .limbs = self.limbs[0..self.len()],
             .positive = self.isPositive(),
@@ -2424,12 +2424,12 @@ pub const Managed = struct {
     }
 
     /// Returns the number of limbs currently in use.
-    pub fn len(self: Managed) usize {
+    pub fn len(self: *const Managed) usize {
         return self.metadata & ~sign_bit;
     }
 
     /// Returns whether an Managed is positive.
-    pub fn isPositive(self: Managed) bool {
+    pub fn isPositive(self: *const Managed) bool {
         return self.metadata & sign_bit == 0;
     }
 
@@ -2473,11 +2473,11 @@ pub const Managed = struct {
     /// Returns a `Managed` with the same value. The returned `Managed` is a deep copy and
     /// can be modified separately from the original, and its resources are managed
     /// separately from the original.
-    pub fn clone(other: Managed) !Managed {
+    pub fn clone(other: *const Managed) !Managed {
         return other.cloneWithDifferentAllocator(other.allocator);
     }
 
-    pub fn cloneWithDifferentAllocator(other: Managed, allocator: Allocator) !Managed {
+    pub fn cloneWithDifferentAllocator(other: *const Managed, allocator: Allocator) !Managed {
         return Managed{
             .allocator = allocator,
             .metadata = other.metadata,
@@ -2506,7 +2506,7 @@ pub const Managed = struct {
     }
 
     /// Debugging tool: prints the state to stderr.
-    pub fn dump(self: Managed) void {
+    pub fn dump(self: *const Managed) void {
         for (self.limbs[0..self.len()]) |limb| {
             std.debug.print("{x} ", .{limb});
         }
@@ -2523,16 +2523,16 @@ pub const Managed = struct {
         self.metadata &= ~sign_bit;
     }
 
-    pub fn isOdd(self: Managed) bool {
+    pub fn isOdd(self: *const Managed) bool {
         return self.limbs[0] & 1 != 0;
     }
 
-    pub fn isEven(self: Managed) bool {
+    pub fn isEven(self: *const Managed) bool {
         return !self.isOdd();
     }
 
     /// Returns the number of bits required to represent the absolute value of an integer.
-    pub fn bitCountAbs(self: Managed) usize {
+    pub fn bitCountAbs(self: *const Managed) usize {
         return self.toConst().bitCountAbs();
     }
 
@@ -2544,23 +2544,23 @@ pub const Managed = struct {
     /// one greater than the returned value.
     ///
     /// e.g. -127 returns 8 as it will fit in an i8. 127 returns 7 since it fits in a u7.
-    pub fn bitCountTwosComp(self: Managed) usize {
+    pub fn bitCountTwosComp(self: *const Managed) usize {
         return self.toConst().bitCountTwosComp();
     }
 
-    pub fn fitsInTwosComp(self: Managed, signedness: Signedness, bit_count: usize) bool {
+    pub fn fitsInTwosComp(self: *const Managed, signedness: Signedness, bit_count: usize) bool {
         return self.toConst().fitsInTwosComp(signedness, bit_count);
     }
 
     /// Returns whether self can fit into an integer of the requested type.
-    pub fn fits(self: Managed, comptime T: type) bool {
+    pub fn fits(self: *const Managed, comptime T: type) bool {
         return self.toConst().fits(T);
     }
 
     /// Returns the approximate size of the integer in the given base. Negative values accommodate for
     /// the minus sign. This is used for determining the number of characters needed to print the
     /// value. It is inexact and may exceed the given value by ~1-2 bytes.
-    pub fn sizeInBaseUpperBound(self: Managed, base: usize) usize {
+    pub fn sizeInBaseUpperBound(self: *const Managed, base: usize) usize {
         return self.toConst().sizeInBaseUpperBound(base);
     }
 
@@ -2577,7 +2577,7 @@ pub const Managed = struct {
     /// Convert self to type T.
     ///
     /// Returns an error if self cannot be narrowed into the requested type without truncation.
-    pub fn to(self: Managed, comptime T: type) ConvertError!T {
+    pub fn to(self: *const Managed, comptime T: type) ConvertError!T {
         return self.toConst().to(T);
     }
 
@@ -2618,7 +2618,7 @@ pub const Managed = struct {
 
     /// Converts self to a string in the requested base. Memory is allocated from the provided
     /// allocator and not the one present in self.
-    pub fn toString(self: Managed, allocator: Allocator, base: u8, case: std.fmt.Case) ![]u8 {
+    pub fn toString(self: *const Managed, allocator: Allocator, base: u8, case: std.fmt.Case) ![]u8 {
         if (base < 2 or base > 16) return error.InvalidBase;
         return self.toConst().toStringAlloc(allocator, base, case);
     }
@@ -2629,7 +2629,7 @@ pub const Managed = struct {
     /// This is because the rendering algorithm requires reversing a string, which requires O(N) memory.
     /// See `toString` and `toStringAlloc` for a way to print big integers without failure.
     pub fn format(
-        self: Managed,
+        self: *const Managed,
         comptime fmt: []const u8,
         options: std.fmt.FormatOptions,
         out_stream: anytype,
@@ -2640,27 +2640,27 @@ pub const Managed = struct {
     /// Returns math.Order.lt, math.Order.eq, math.Order.gt if |a| < |b|, |a| ==
     /// |b| or |a| > |b| respectively.
     pub fn orderAbs(a: Managed, b: Managed) math.Order {
-        return a.toConst().orderAbs(b.toConst());
+        return Const.orderAbs(a.toConst(), b.toConst());
     }
 
     /// Returns math.Order.lt, math.Order.eq, math.Order.gt if a < b, a == b or a
     /// > b respectively.
     pub fn order(a: Managed, b: Managed) math.Order {
-        return a.toConst().order(b.toConst());
+        return Const.order(a.toConst(), b.toConst());
     }
 
     /// Returns true if a == 0.
-    pub fn eqZero(a: Managed) bool {
+    pub fn eqZero(a: *const Managed) bool {
         return a.toConst().eqZero();
     }
 
     /// Returns true if |a| == |b|.
-    pub fn eqAbs(a: Managed, b: Managed) bool {
+    pub fn eqAbs(a: *const Managed, b: Managed) bool {
         return a.toConst().eqAbs(b.toConst());
     }
 
     /// Returns true if a == b.
-    pub fn eq(a: Managed, b: Managed) bool {
+    pub fn eq(a: *const Managed, b: Managed) bool {
         return a.toConst().eq(b.toConst());
     }
 

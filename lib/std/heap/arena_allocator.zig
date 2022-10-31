@@ -33,7 +33,7 @@ pub const ArenaAllocator = struct {
         return (State{}).promote(child_allocator);
     }
 
-    pub fn deinit(self: ArenaAllocator) void {
+    pub fn deinit(self: *const ArenaAllocator) void {
         var it = self.state.buffer_list.first;
         while (it) |node| {
             // this has to occur before the free because the free frees node

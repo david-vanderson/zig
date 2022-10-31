@@ -35,7 +35,7 @@ pub const P256 = struct {
     pub const B = Fe.fromInt(41058363725152142129326129780047268409114441015993725554835256314039467401291) catch unreachable;
 
     /// Reject the neutral element.
-    pub fn rejectIdentity(p: P256) IdentityElementError!void {
+    pub fn rejectIdentity(p: *const P256) IdentityElementError!void {
         if (p.x.isZero()) {
             return error.IdentityElement;
         }
@@ -101,7 +101,7 @@ pub const P256 = struct {
     }
 
     /// Serialize a point using the compressed SEC-1 format.
-    pub fn toCompressedSec1(p: P256) [33]u8 {
+    pub fn toCompressedSec1(p: *const P256) [33]u8 {
         var out: [33]u8 = undefined;
         const xy = p.affineCoordinates();
         out[0] = if (xy.y.isOdd()) 3 else 2;
@@ -110,7 +110,7 @@ pub const P256 = struct {
     }
 
     /// Serialize a point using the uncompressed SEC-1 format.
-    pub fn toUncompressedSec1(p: P256) [65]u8 {
+    pub fn toUncompressedSec1(p: *const P256) [65]u8 {
         var out: [65]u8 = undefined;
         out[0] = 4;
         const xy = p.affineCoordinates();
@@ -126,13 +126,13 @@ pub const P256 = struct {
     }
 
     /// Flip the sign of the X coordinate.
-    pub fn neg(p: P256) P256 {
+    pub fn neg(p: *const P256) P256 {
         return .{ .x = p.x, .y = p.y.neg(), .z = p.z };
     }
 
     /// Double a P256 point.
     // Algorithm 6 from https://eprint.iacr.org/2015/1060.pdf
-    pub fn dbl(p: P256) P256 {
+    pub fn dbl(p: *const P256) P256 {
         var t0 = p.x.sq();
         var t1 = p.y.sq();
         var t2 = p.z.sq();
@@ -175,7 +175,7 @@ pub const P256 = struct {
 
     /// Add P256 points, the second being specified using affine coordinates.
     // Algorithm 5 from https://eprint.iacr.org/2015/1060.pdf
-    pub fn addMixed(p: P256, q: AffineCoordinates) P256 {
+    pub fn addMixed(p: *const P256, q: AffineCoordinates) P256 {
         var t0 = p.x.mul(q.x);
         var t1 = p.y.mul(q.y);
         var t3 = q.x.add(q.y);
@@ -223,7 +223,7 @@ pub const P256 = struct {
 
     /// Add P256 points.
     // Algorithm 4 from https://eprint.iacr.org/2015/1060.pdf
-    pub fn add(p: P256, q: P256) P256 {
+    pub fn add(p: *const P256, q: P256) P256 {
         var t0 = p.x.mul(q.x);
         var t1 = p.y.mul(q.y);
         var t2 = p.z.mul(q.z);
@@ -275,17 +275,17 @@ pub const P256 = struct {
     }
 
     /// Subtract P256 points.
-    pub fn sub(p: P256, q: P256) P256 {
+    pub fn sub(p: *const P256, q: P256) P256 {
         return p.add(q.neg());
     }
 
     /// Subtract P256 points, the second being specified using affine coordinates.
-    pub fn subMixed(p: P256, q: AffineCoordinates) P256 {
+    pub fn subMixed(p: *const P256, q: AffineCoordinates) P256 {
         return p.addMixed(q.neg());
     }
 
     /// Return affine coordinates.
-    pub fn affineCoordinates(p: P256) AffineCoordinates {
+    pub fn affineCoordinates(p: *const P256) AffineCoordinates {
         const zinv = p.z.invert();
         var ret = AffineCoordinates{
             .x = p.x.mul(zinv),
@@ -296,7 +296,7 @@ pub const P256 = struct {
     }
 
     /// Return true if both coordinate sets represent the same point.
-    pub fn equivalent(a: P256, b: P256) bool {
+    pub fn equivalent(a: *const P256, b: P256) bool {
         if (a.sub(b).rejectIdentity()) {
             return false;
         } else |_| {
@@ -395,25 +395,25 @@ pub const P256 = struct {
 
     /// Multiply an elliptic curve point by a scalar.
     /// Return error.IdentityElement if the result is the identity element.
-    pub fn mul(p: P256, s_: [32]u8, endian: std.builtin.Endian) IdentityElementError!P256 {
+    pub fn mul(p: *const P256, s_: [32]u8, endian: std.builtin.Endian) IdentityElementError!P256 {
         const s = if (endian == .Little) s_ else Fe.orderSwap(s_);
         if (p.is_base) {
             return pcMul16(&basePointPc, s, false);
         }
         try p.rejectIdentity();
-        const pc = precompute(p, 15);
+        const pc = precompute(p.*, 15);
         return pcMul16(&pc, s, false);
     }
 
     /// Multiply an elliptic curve point by a *PUBLIC* scalar *IN VARIABLE TIME*
     /// This can be used for signature verification.
-    pub fn mulPublic(p: P256, s_: [32]u8, endian: std.builtin.Endian) IdentityElementError!P256 {
+    pub fn mulPublic(p: *const P256, s_: [32]u8, endian: std.builtin.Endian) IdentityElementError!P256 {
         const s = if (endian == .Little) s_ else Fe.orderSwap(s_);
         if (p.is_base) {
             return pcMul16(&basePointPc, s, true);
         }
         try p.rejectIdentity();
-        const pc = precompute(p, 8);
+        const pc = precompute(p.*, 8);
         return pcMul(&pc, s, true);
     }
 

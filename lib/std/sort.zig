@@ -117,7 +117,7 @@ const Range = struct {
         };
     }
 
-    fn length(self: Range) usize {
+    fn length(self: *const Range) usize {
         return self.end - self.start;
     }
 };

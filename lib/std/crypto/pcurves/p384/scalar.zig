@@ -89,67 +89,67 @@ pub const Scalar = struct {
     }
 
     /// Pack a scalar into bytes.
-    pub fn toBytes(n: Scalar, endian: std.builtin.Endian) CompressedScalar {
+    pub fn toBytes(n: *const Scalar, endian: std.builtin.Endian) CompressedScalar {
         return n.fe.toBytes(endian);
     }
 
     /// Return true if the scalar is zero..
-    pub fn isZero(n: Scalar) bool {
+    pub fn isZero(n: *const Scalar) bool {
         return n.fe.isZero();
     }
 
     /// Return true if a and b are equivalent.
-    pub fn equivalent(a: Scalar, b: Scalar) bool {
+    pub fn equivalent(a: *const Scalar, b: Scalar) bool {
         return a.fe.equivalent(b.fe);
     }
 
     /// Compute x+y (mod L)
-    pub fn add(x: Scalar, y: Scalar) Scalar {
+    pub fn add(x: *const Scalar, y: Scalar) Scalar {
         return Scalar{ .fe = x.fe.add(y.fe) };
     }
 
     /// Compute x-y (mod L)
-    pub fn sub(x: Scalar, y: Scalar) Scalar {
+    pub fn sub(x: *const Scalar, y: Scalar) Scalar {
         return Scalar{ .fe = x.fe.sub(y.fe) };
     }
 
     /// Compute 2n (mod L)
-    pub fn dbl(n: Scalar) Scalar {
+    pub fn dbl(n: *const Scalar) Scalar {
         return Scalar{ .fe = n.fe.dbl() };
     }
 
     /// Compute x*y (mod L)
-    pub fn mul(x: Scalar, y: Scalar) Scalar {
+    pub fn mul(x: *const Scalar, y: Scalar) Scalar {
         return Scalar{ .fe = x.fe.mul(y.fe) };
     }
 
     /// Compute x^2 (mod L)
-    pub fn sq(n: Scalar) Scalar {
+    pub fn sq(n: *const Scalar) Scalar {
         return Scalar{ .fe = n.fe.sq() };
     }
 
     /// Compute x^n (mod L)
-    pub fn pow(a: Scalar, comptime T: type, comptime n: T) Scalar {
+    pub fn pow(a: *const Scalar, comptime T: type, comptime n: T) Scalar {
         return Scalar{ .fe = a.fe.pow(n) };
     }
 
     /// Compute -x (mod L)
-    pub fn neg(n: Scalar) Scalar {
+    pub fn neg(n: *const Scalar) Scalar {
         return Scalar{ .fe = n.fe.neg() };
     }
 
     /// Compute x^-1 (mod L)
-    pub fn invert(n: Scalar) Scalar {
+    pub fn invert(n: *const Scalar) Scalar {
         return Scalar{ .fe = n.fe.invert() };
     }
 
     /// Return true if n is a quadratic residue mod L.
-    pub fn isSquare(n: Scalar) Scalar {
+    pub fn isSquare(n: *const Scalar) Scalar {
         return n.fe.isSquare();
     }
 
     /// Return the square root of L, or NotSquare if there isn't any solutions.
-    pub fn sqrt(n: Scalar) NotSquareError!Scalar {
+    pub fn sqrt(n: *const Scalar) NotSquareError!Scalar {
         return Scalar{ .fe = try n.fe.sqrt() };
     }
 

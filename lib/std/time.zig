@@ -197,7 +197,7 @@ pub const Instant = struct {
     }
 
     /// Quickly compares two instances between each other.
-    pub fn order(self: Instant, other: Instant) std.math.Order {
+    pub fn order(self: *const Instant, other: Instant) std.math.Order {
         // windows and wasi timestamps are in u64 which is easily comparible
         if (!is_posix) {
             return std.math.order(self.timestamp, other.timestamp);
@@ -213,7 +213,7 @@ pub const Instant = struct {
     /// Returns elapsed time in nanoseconds since the `earlier` Instant.
     /// This assumes that the `earlier` Instant represents a moment in time before or equal to `self`.
     /// This also assumes that the time that has passed between both Instants fits inside a u64 (~585 yrs).
-    pub fn since(self: Instant, earlier: Instant) u64 {
+    pub fn since(self: *const Instant, earlier: Instant) u64 {
         if (builtin.os.tag == .windows) {
             // We don't need to cache QPF as it's internally just a memory read to KUSER_SHARED_DATA
             // (a read-only page of info updated and mapped by the kernel to all processes):

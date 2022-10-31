@@ -102,7 +102,7 @@ const Parser = struct {
         rhs: Node.Index,
         trailing: bool,
 
-        fn toSpan(self: Members, p: *Parser) !Node.SubRange {
+        fn toSpan(self: *const Members, p: *Parser) !Node.SubRange {
             if (self.len <= 2) {
                 const nodes = [2]Node.Index{ self.lhs, self.rhs };
                 return p.listToSpan(nodes[0..self.len]);

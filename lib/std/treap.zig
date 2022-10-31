@@ -149,7 +149,7 @@ pub fn Treap(comptime Key: type, comptime compareFn: anytype) type {
             }
         };
 
-        fn find(self: Self, key: Key, parent_ref: *?*Node) ?*Node {
+        fn find(self: *const Self, key: Key, parent_ref: *?*Node) ?*Node {
             var node = self.root;
             parent_ref.* = null;
 

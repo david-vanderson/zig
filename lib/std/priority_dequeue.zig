@@ -35,7 +35,7 @@ pub fn PriorityDequeue(comptime T: type, comptime Context: type, comptime compar
         }
 
         /// Free memory used by the dequeue.
-        pub fn deinit(self: Self) void {
+        pub fn deinit(self: *const Self) void {
             self.allocator.free(self.items);
         }
 
@@ -74,7 +74,7 @@ pub fn PriorityDequeue(comptime T: type, comptime Context: type, comptime compar
             return (highest_set_bit & 1) == 0;
         }
 
-        fn nextIsMinLayer(self: Self) bool {
+        fn nextIsMinLayer(self: *const Self) bool {
             return isMinLayer(self.len);
         }
 
@@ -83,7 +83,7 @@ pub fn PriorityDequeue(comptime T: type, comptime Context: type, comptime compar
             min_layer: bool,
         };
 
-        fn getStartForSiftUp(self: Self, child: T, index: usize) StartIndexAndLayer {
+        fn getStartForSiftUp(self: *const Self, child: T, index: usize) StartIndexAndLayer {
             var child_index = index;
             var parent_index = parentIndex(child_index);
             const parent = self.items[parent_index];
@@ -146,7 +146,7 @@ pub fn PriorityDequeue(comptime T: type, comptime Context: type, comptime compar
             return self.bestItemAtIndices(1, 2, .gt).item;
         }
 
-        fn maxIndex(self: Self) ?usize {
+        fn maxIndex(self: *const Self) ?usize {
             if (self.len == 0) return null;
             if (self.len == 1) return 0;
             if (self.len == 2) return 1;
@@ -272,14 +272,14 @@ pub fn PriorityDequeue(comptime T: type, comptime Context: type, comptime compar
             index: usize,
         };
 
-        fn getItem(self: Self, index: usize) ItemAndIndex {
+        fn getItem(self: *const Self, index: usize) ItemAndIndex {
             return .{
                 .item = self.items[index],
                 .index = index,
             };
         }
 
-        fn bestItem(self: Self, item1: ItemAndIndex, item2: ItemAndIndex, target_order: Order) ItemAndIndex {
+        fn bestItem(self: *const Self, item1: ItemAndIndex, item2: ItemAndIndex, target_order: Order) ItemAndIndex {
             if (compareFn(self.context, item1.item, item2.item) == target_order) {
                 return item1;
             } else {
@@ -287,13 +287,13 @@ pub fn PriorityDequeue(comptime T: type, comptime Context: type, comptime compar
             }
         }
 
-        fn bestItemAtIndices(self: Self, index1: usize, index2: usize, target_order: Order) ItemAndIndex {
+        fn bestItemAtIndices(self: *const Self, index1: usize, index2: usize, target_order: Order) ItemAndIndex {
             var item1 = self.getItem(index1);
             var item2 = self.getItem(index2);
             return self.bestItem(item1, item2, target_order);
         }
 
-        fn bestDescendent(self: Self, first_child_index: usize, first_grandchild_index: usize, target_order: Order) ItemAndIndex {
+        fn bestDescendent(self: *const Self, first_child_index: usize, first_grandchild_index: usize, target_order: Order) ItemAndIndex {
             const second_child_index = first_child_index + 1;
             if (first_grandchild_index >= self.len) {
                 // No grandchildren, find the best child (second may not exist)
@@ -325,13 +325,13 @@ pub fn PriorityDequeue(comptime T: type, comptime Context: type, comptime compar
         }
 
         /// Return the number of elements remaining in the dequeue
-        pub fn count(self: Self) usize {
+        pub fn count(self: *const Self) usize {
             return self.len;
         }
 
         /// Return the number of elements that can be added to the
         /// dequeue before more memory is allocated.
-        pub fn capacity(self: Self) usize {
+        pub fn capacity(self: *const Self) usize {
             return self.items.len;
         }
 

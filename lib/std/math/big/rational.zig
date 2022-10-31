@@ -335,14 +335,14 @@ pub const Rational = struct {
 
     /// Returns math.Order.lt, math.Order.eq, math.Order.gt if a < b, a == b or a
     /// > b respectively.
-    pub fn order(a: Rational, b: Rational) !math.Order {
-        return cmpInternal(a, b, false);
+    pub fn order(a: *const Rational, b: Rational) !math.Order {
+        return cmpInternal(a.*, b, false);
     }
 
     /// Returns math.Order.lt, math.Order.eq, math.Order.gt if |a| < |b|, |a| ==
     /// |b| or |a| > |b| respectively.
-    pub fn orderAbs(a: Rational, b: Rational) !math.Order {
-        return cmpInternal(a, b, true);
+    pub fn orderAbs(a: *const Rational, b: Rational) !math.Order {
+        return cmpInternal(a.*, b, true);
     }
 
     // p/q > x/y iff p*y > x*q

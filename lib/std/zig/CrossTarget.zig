@@ -169,7 +169,7 @@ fn updateOsVersionRange(self: *CrossTarget, os: Target.Os) void {
 }
 
 /// TODO deprecated, use `std.zig.system.NativeTargetInfo.detect`.
-pub fn toTarget(self: CrossTarget) Target {
+pub fn toTarget(self: *const CrossTarget) Target {
     return .{
         .cpu = self.getCpu(),
         .os = self.getOs(),
@@ -354,7 +354,7 @@ pub fn parseCpuArch(args: ParseOptions) ?Target.Cpu.Arch {
 }
 
 /// TODO deprecated, use `std.zig.system.NativeTargetInfo.detect`.
-pub fn getCpu(self: CrossTarget) Target.Cpu {
+pub fn getCpu(self: *const CrossTarget) Target.Cpu {
     switch (self.cpu_model) {
         .native => {
             // This works when doing `zig build` because Zig generates a build executable using
@@ -385,23 +385,23 @@ pub fn getCpu(self: CrossTarget) Target.Cpu {
     }
 }
 
-pub fn getCpuArch(self: CrossTarget) Target.Cpu.Arch {
+pub fn getCpuArch(self: *const CrossTarget) Target.Cpu.Arch {
     return self.cpu_arch orelse builtin.cpu.arch;
 }
 
-pub fn getCpuModel(self: CrossTarget) *const Target.Cpu.Model {
+pub fn getCpuModel(self: *const CrossTarget) *const Target.Cpu.Model {
     return switch (self.cpu_model) {
         .explicit => |cpu_model| cpu_model,
         else => self.getCpu().model,
     };
 }
 
-pub fn getCpuFeatures(self: CrossTarget) Target.Cpu.Feature.Set {
+pub fn getCpuFeatures(self: *const CrossTarget) Target.Cpu.Feature.Set {
     return self.getCpu().features;
 }
 
 /// TODO deprecated, use `std.zig.system.NativeTargetInfo.detect`.
-pub fn getOs(self: CrossTarget) Target.Os {
+pub fn getOs(self: *const CrossTarget) Target.Os {
     // `builtin.os` works when doing `zig build` because Zig generates a build executable using
     // native OS version range. However this will not be accurate otherwise, and
     // will need to be integrated with `std.zig.system.NativeTargetInfo.detect`.
@@ -433,12 +433,12 @@ pub fn getOs(self: CrossTarget) Target.Os {
     return adjusted_os;
 }
 
-pub fn getOsTag(self: CrossTarget) Target.Os.Tag {
+pub fn getOsTag(self: *const CrossTarget) Target.Os.Tag {
     return self.os_tag orelse builtin.os.tag;
 }
 
 /// TODO deprecated, use `std.zig.system.NativeTargetInfo.detect`.
-pub fn getOsVersionMin(self: CrossTarget) OsVersion {
+pub fn getOsVersionMin(self: *const CrossTarget) OsVersion {
     if (self.os_version_min) |version_min| return version_min;
     var tmp: CrossTarget = undefined;
     tmp.updateOsVersionRange(self.getOs());
@@ -446,7 +446,7 @@ pub fn getOsVersionMin(self: CrossTarget) OsVersion {
 }
 
 /// TODO deprecated, use `std.zig.system.NativeTargetInfo.detect`.
-pub fn getOsVersionMax(self: CrossTarget) OsVersion {
+pub fn getOsVersionMax(self: *const CrossTarget) OsVersion {
     if (self.os_version_max) |version_max| return version_max;
     var tmp: CrossTarget = undefined;
     tmp.updateOsVersionRange(self.getOs());
@@ -454,7 +454,7 @@ pub fn getOsVersionMax(self: CrossTarget) OsVersion {
 }
 
 /// TODO deprecated, use `std.zig.system.NativeTargetInfo.detect`.
-pub fn getAbi(self: CrossTarget) Target.Abi {
+pub fn getAbi(self: *const CrossTarget) Target.Abi {
     if (self.abi) |abi| return abi;
 
     if (self.os_tag == null) {
@@ -467,74 +467,74 @@ pub fn getAbi(self: CrossTarget) Target.Abi {
     return Target.Abi.default(self.getCpuArch(), self.getOs());
 }
 
-pub fn isFreeBSD(self: CrossTarget) bool {
+pub fn isFreeBSD(self: *const CrossTarget) bool {
     return self.getOsTag() == .freebsd;
 }
 
-pub fn isDarwin(self: CrossTarget) bool {
+pub fn isDarwin(self: *const CrossTarget) bool {
     return self.getOsTag().isDarwin();
 }
 
-pub fn isNetBSD(self: CrossTarget) bool {
+pub fn isNetBSD(self: *const CrossTarget) bool {
     return self.getOsTag() == .netbsd;
 }
 
-pub fn isOpenBSD(self: CrossTarget) bool {
+pub fn isOpenBSD(self: *const CrossTarget) bool {
     return self.getOsTag() == .openbsd;
 }
 
-pub fn isUefi(self: CrossTarget) bool {
+pub fn isUefi(self: *const CrossTarget) bool {
     return self.getOsTag() == .uefi;
 }
 
-pub fn isDragonFlyBSD(self: CrossTarget) bool {
+pub fn isDragonFlyBSD(self: *const CrossTarget) bool {
     return self.getOsTag() == .dragonfly;
 }
 
-pub fn isLinux(self: CrossTarget) bool {
+pub fn isLinux(self: *const CrossTarget) bool {
     return self.getOsTag() == .linux;
 }
 
-pub fn isWindows(self: CrossTarget) bool {
+pub fn isWindows(self: *const CrossTarget) bool {
     return self.getOsTag() == .windows;
 }
 
-pub fn exeFileExt(self: CrossTarget) [:0]const u8 {
+pub fn exeFileExt(self: *const CrossTarget) [:0]const u8 {
     return Target.exeFileExtSimple(self.getCpuArch(), self.getOsTag());
 }
 
-pub fn staticLibSuffix(self: CrossTarget) [:0]const u8 {
+pub fn staticLibSuffix(self: *const CrossTarget) [:0]const u8 {
     return Target.staticLibSuffix_os_abi(self.getOsTag(), self.getAbi());
 }
 
-pub fn dynamicLibSuffix(self: CrossTarget) [:0]const u8 {
+pub fn dynamicLibSuffix(self: *const CrossTarget) [:0]const u8 {
     return self.getOsTag().dynamicLibSuffix();
 }
 
-pub fn libPrefix(self: CrossTarget) [:0]const u8 {
+pub fn libPrefix(self: *const CrossTarget) [:0]const u8 {
     return Target.libPrefix_os_abi(self.getOsTag(), self.getAbi());
 }
 
-pub fn isNativeCpu(self: CrossTarget) bool {
+pub fn isNativeCpu(self: *const CrossTarget) bool {
     return self.cpu_arch == null and
         (self.cpu_model == .native or self.cpu_model == .determined_by_cpu_arch) and
         self.cpu_features_sub.isEmpty() and self.cpu_features_add.isEmpty();
 }
 
-pub fn isNativeOs(self: CrossTarget) bool {
+pub fn isNativeOs(self: *const CrossTarget) bool {
     return self.os_tag == null and self.os_version_min == null and self.os_version_max == null and
         self.dynamic_linker.get() == null and self.glibc_version == null;
 }
 
-pub fn isNativeAbi(self: CrossTarget) bool {
+pub fn isNativeAbi(self: *const CrossTarget) bool {
     return self.os_tag == null and self.abi == null;
 }
 
-pub fn isNative(self: CrossTarget) bool {
+pub fn isNative(self: *const CrossTarget) bool {
     return self.isNativeCpu() and self.isNativeOs() and self.isNativeAbi();
 }
 
-pub fn zigTriple(self: CrossTarget, allocator: mem.Allocator) error{OutOfMemory}![]u8 {
+pub fn zigTriple(self: *const CrossTarget, allocator: mem.Allocator) error{OutOfMemory}![]u8 {
     if (self.isNative()) {
         return allocator.dupe(u8, "native");
     }
@@ -573,24 +573,24 @@ pub fn zigTriple(self: CrossTarget, allocator: mem.Allocator) error{OutOfMemory}
     return result.toOwnedSlice();
 }
 
-pub fn allocDescription(self: CrossTarget, allocator: mem.Allocator) ![]u8 {
+pub fn allocDescription(self: *const CrossTarget, allocator: mem.Allocator) ![]u8 {
     // TODO is there anything else worthy of the description that is not
     // already captured in the triple?
     return self.zigTriple(allocator);
 }
 
-pub fn linuxTriple(self: CrossTarget, allocator: mem.Allocator) ![]u8 {
+pub fn linuxTriple(self: *const CrossTarget, allocator: mem.Allocator) ![]u8 {
     return Target.linuxTripleSimple(allocator, self.getCpuArch(), self.getOsTag(), self.getAbi());
 }
 
-pub fn wantSharedLibSymLinks(self: CrossTarget) bool {
+pub fn wantSharedLibSymLinks(self: *const CrossTarget) bool {
     return self.getOsTag() != .windows;
 }
 
 pub const VcpkgLinkage = std.builtin.LinkMode;
 
 /// Returned slice must be freed by the caller.
-pub fn vcpkgTriplet(self: CrossTarget, allocator: mem.Allocator, linkage: VcpkgLinkage) ![]u8 {
+pub fn vcpkgTriplet(self: *const CrossTarget, allocator: mem.Allocator, linkage: VcpkgLinkage) ![]u8 {
     const arch = switch (self.getCpuArch()) {
         .i386 => "x86",
         .x86_64 => "x64",
@@ -624,7 +624,7 @@ pub fn vcpkgTriplet(self: CrossTarget, allocator: mem.Allocator, linkage: VcpkgL
     return std.fmt.allocPrint(allocator, "{s}-{s}{s}", .{ arch, os, static_suffix });
 }
 
-pub fn isGnuLibC(self: CrossTarget) bool {
+pub fn isGnuLibC(self: *const CrossTarget) bool {
     return Target.isGnuLibC_os_tag_abi(self.getOsTag(), self.getAbi());
 }
 
@@ -633,11 +633,11 @@ pub fn setGnuLibCVersion(self: *CrossTarget, major: u32, minor: u32, patch: u32)
     self.glibc_version = SemVer{ .major = major, .minor = minor, .patch = patch };
 }
 
-pub fn getObjectFormat(self: CrossTarget) Target.ObjectFormat {
+pub fn getObjectFormat(self: *const CrossTarget) Target.ObjectFormat {
     return self.ofmt orelse Target.ObjectFormat.default(self.getOsTag(), self.getCpuArch());
 }
 
-pub fn updateCpuFeatures(self: CrossTarget, set: *Target.Cpu.Feature.Set) void {
+pub fn updateCpuFeatures(self: *const CrossTarget, set: *Target.Cpu.Feature.Set) void {
     set.removeFeatureSet(self.cpu_features_sub);
     set.addFeatureSet(self.cpu_features_add);
     set.populateDependencies(self.getCpuArch().allFeaturesList());

@@ -35,7 +35,7 @@ pub const P384 = struct {
     pub const B = Fe.fromInt(27580193559959705877849011840389048093056905856361568521428707301988689241309860865136260764883745107765439761230575) catch unreachable;
 
     /// Reject the neutral element.
-    pub fn rejectIdentity(p: P384) IdentityElementError!void {
+    pub fn rejectIdentity(p: *const P384) IdentityElementError!void {
         if (p.x.isZero()) {
             return error.IdentityElement;
         }
@@ -101,7 +101,7 @@ pub const P384 = struct {
     }
 
     /// Serialize a point using the compressed SEC-1 format.
-    pub fn toCompressedSec1(p: P384) [49]u8 {
+    pub fn toCompressedSec1(p: *const P384) [49]u8 {
         var out: [49]u8 = undefined;
         const xy = p.affineCoordinates();
         out[0] = if (xy.y.isOdd()) 3 else 2;
@@ -110,7 +110,7 @@ pub const P384 = struct {
     }
 
     /// Serialize a point using the uncompressed SEC-1 format.
-    pub fn toUncompressedSec1(p: P384) [97]u8 {
+    pub fn toUncompressedSec1(p: *const P384) [97]u8 {
         var out: [97]u8 = undefined;
         out[0] = 4;
         const xy = p.affineCoordinates();
@@ -126,13 +126,13 @@ pub const P384 = struct {
     }
 
     /// Flip the sign of the X coordinate.
-    pub fn neg(p: P384) P384 {
+    pub fn neg(p: *const P384) P384 {
         return .{ .x = p.x, .y = p.y.neg(), .z = p.z };
     }
 
     /// Double a P384 point.
     // Algorithm 6 from https://eprint.iacr.org/2015/1060.pdf
-    pub fn dbl(p: P384) P384 {
+    pub fn dbl(p: *const P384) P384 {
         var t0 = p.x.sq();
         var t1 = p.y.sq();
         var t2 = p.z.sq();
@@ -175,7 +175,7 @@ pub const P384 = struct {
 
     /// Add P384 points, the second being specified using affine coordinates.
     // Algorithm 5 from https://eprint.iacr.org/2015/1060.pdf
-    pub fn addMixed(p: P384, q: AffineCoordinates) P384 {
+    pub fn addMixed(p: *const P384, q: AffineCoordinates) P384 {
         var t0 = p.x.mul(q.x);
         var t1 = p.y.mul(q.y);
         var t3 = q.x.add(q.y);
@@ -223,7 +223,7 @@ pub const P384 = struct {
 
     /// Add P384 points.
     // Algorithm 4 from https://eprint.iacr.org/2015/1060.pdf
-    pub fn add(p: P384, q: P384) P384 {
+    pub fn add(p: *const P384, q: P384) P384 {
         var t0 = p.x.mul(q.x);
         var t1 = p.y.mul(q.y);
         var t2 = p.z.mul(q.z);
@@ -275,17 +275,17 @@ pub const P384 = struct {
     }
 
     /// Subtract P384 points.
-    pub fn sub(p: P384, q: P384) P384 {
+    pub fn sub(p: *const P384, q: P384) P384 {
         return p.add(q.neg());
     }
 
     /// Subtract P384 points, the second being specified using affine coordinates.
-    pub fn subMixed(p: P384, q: AffineCoordinates) P384 {
+    pub fn subMixed(p: *const P384, q: AffineCoordinates) P384 {
         return p.addMixed(q.neg());
     }
 
     /// Return affine coordinates.
-    pub fn affineCoordinates(p: P384) AffineCoordinates {
+    pub fn affineCoordinates(p: *const P384) AffineCoordinates {
         const zinv = p.z.invert();
         var ret = AffineCoordinates{
             .x = p.x.mul(zinv),
@@ -296,7 +296,7 @@ pub const P384 = struct {
     }
 
     /// Return true if both coordinate sets represent the same point.
-    pub fn equivalent(a: P384, b: P384) bool {
+    pub fn equivalent(a: *const P384, b: P384) bool {
         if (a.sub(b).rejectIdentity()) {
             return false;
         } else |_| {
@@ -389,31 +389,31 @@ pub const P384 = struct {
     }
 
     const basePointPc = pc: {
-        @setEvalBranchQuota(50000);
+        @setEvalBranchQuota(100000);
         break :pc precompute(P384.basePoint, 15);
     };
 
     /// Multiply an elliptic curve point by a scalar.
     /// Return error.IdentityElement if the result is the identity element.
-    pub fn mul(p: P384, s_: [48]u8, endian: std.builtin.Endian) IdentityElementError!P384 {
+    pub fn mul(p: *const P384, s_: [48]u8, endian: std.builtin.Endian) IdentityElementError!P384 {
         const s = if (endian == .Little) s_ else Fe.orderSwap(s_);
         if (p.is_base) {
             return pcMul16(&basePointPc, s, false);
         }
         try p.rejectIdentity();
-        const pc = precompute(p, 15);
+        const pc = precompute(p.*, 15);
         return pcMul16(&pc, s, false);
     }
 
     /// Multiply an elliptic curve point by a *PUBLIC* scalar *IN VARIABLE TIME*
     /// This can be used for signature verification.
-    pub fn mulPublic(p: P384, s_: [48]u8, endian: std.builtin.Endian) IdentityElementError!P384 {
+    pub fn mulPublic(p: *const P384, s_: [48]u8, endian: std.builtin.Endian) IdentityElementError!P384 {
         const s = if (endian == .Little) s_ else Fe.orderSwap(s_);
         if (p.is_base) {
             return pcMul16(&basePointPc, s, true);
         }
         try p.rejectIdentity();
-        const pc = precompute(p, 8);
+        const pc = precompute(p.*, 8);
         return pcMul(&pc, s, true);
     }
 

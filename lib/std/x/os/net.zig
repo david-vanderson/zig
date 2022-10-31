@@ -309,7 +309,7 @@ pub const IPv6 = extern struct {
     }
 
     /// Returns true if the address maps to an IPv4 address.
-    pub fn mapsToIPv4(self: IPv6) bool {
+    pub fn mapsToIPv4(self: *const IPv6) bool {
         return mem.startsWith(u8, &self.octets, &v4_mapped_prefix);
     }
 

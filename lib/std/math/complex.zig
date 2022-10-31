@@ -43,7 +43,7 @@ pub fn Complex(comptime T: type) type {
         }
 
         /// Returns the sum of two complex numbers.
-        pub fn add(self: Self, other: Self) Self {
+        pub fn add(self: *const Self, other: Self) Self {
             return Self{
                 .re = self.re + other.re,
                 .im = self.im + other.im,
@@ -51,7 +51,7 @@ pub fn Complex(comptime T: type) type {
         }
 
         /// Returns the subtraction of two complex numbers.
-        pub fn sub(self: Self, other: Self) Self {
+        pub fn sub(self: *const Self, other: Self) Self {
             return Self{
                 .re = self.re - other.re,
                 .im = self.im - other.im,
@@ -59,7 +59,7 @@ pub fn Complex(comptime T: type) type {
         }
 
         /// Returns the product of two complex numbers.
-        pub fn mul(self: Self, other: Self) Self {
+        pub fn mul(self: *const Self, other: Self) Self {
             return Self{
                 .re = self.re * other.re - self.im * other.im,
                 .im = self.im * other.re + self.re * other.im,
@@ -67,7 +67,7 @@ pub fn Complex(comptime T: type) type {
         }
 
         /// Returns the quotient of two complex numbers.
-        pub fn div(self: Self, other: Self) Self {
+        pub fn div(self: *const Self, other: Self) Self {
             const re_num = self.re * other.re + self.im * other.im;
             const im_num = self.im * other.re - self.re * other.im;
             const den = other.re * other.re + other.im * other.im;
@@ -79,7 +79,7 @@ pub fn Complex(comptime T: type) type {
         }
 
         /// Returns the complex conjugate of a number.
-        pub fn conjugate(self: Self) Self {
+        pub fn conjugate(self: *const Self) Self {
             return Self{
                 .re = self.re,
                 .im = -self.im,
@@ -87,7 +87,7 @@ pub fn Complex(comptime T: type) type {
         }
 
         /// Returns the negation of a complex number.
-        pub fn neg(self: Self) Self {
+        pub fn neg(self: *const Self) Self {
             return Self{
                 .re = -self.re,
                 .im = -self.im,
@@ -95,7 +95,7 @@ pub fn Complex(comptime T: type) type {
         }
 
         /// Returns the product of complex number and i=sqrt(-1)
-        pub fn mulbyi(self: Self) Self {
+        pub fn mulbyi(self: *const Self) Self {
             return Self{
                 .re = -self.im,
                 .im = self.re,
@@ -103,7 +103,7 @@ pub fn Complex(comptime T: type) type {
         }
 
         /// Returns the reciprocal of a complex number.
-        pub fn reciprocal(self: Self) Self {
+        pub fn reciprocal(self: *const Self) Self {
             const m = self.re * self.re + self.im * self.im;
             return Self{
                 .re = self.re / m,
@@ -112,7 +112,7 @@ pub fn Complex(comptime T: type) type {
         }
 
         /// Returns the magnitude of a complex number.
-        pub fn magnitude(self: Self) T {
+        pub fn magnitude(self: *const Self) T {
             return @sqrt(self.re * self.re + self.im * self.im);
         }
     };

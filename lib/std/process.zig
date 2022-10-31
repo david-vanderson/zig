@@ -159,7 +159,7 @@ pub const EnvMap = struct {
     /// Find the address of the value associated with a key.
     /// The returned pointer is invalidated if the map resizes.
     /// On Windows `key` must be a valid UTF-8 string.
-    pub fn getPtr(self: EnvMap, key: []const u8) ?*[]const u8 {
+    pub fn getPtr(self: *const EnvMap, key: []const u8) ?*[]const u8 {
         return self.hash_map.getPtr(key);
     }
 
@@ -167,7 +167,7 @@ pub const EnvMap = struct {
     /// a key.  The returned string is invalidated if this
     /// key is removed from the map.
     /// On Windows `key` must be a valid UTF-8 string.
-    pub fn get(self: EnvMap, key: []const u8) ?[]const u8 {
+    pub fn get(self: *const EnvMap, key: []const u8) ?[]const u8 {
         return self.hash_map.get(key);
     }
 
@@ -181,7 +181,7 @@ pub const EnvMap = struct {
     }
 
     /// Returns the number of KV pairs stored in the map.
-    pub fn count(self: EnvMap) HashMap.Size {
+    pub fn count(self: *const EnvMap) HashMap.Size {
         return self.hash_map.count();
     }
 
@@ -190,11 +190,11 @@ pub const EnvMap = struct {
         return self.hash_map.iterator();
     }
 
-    fn free(self: EnvMap, value: []const u8) void {
+    fn free(self: *const EnvMap, value: []const u8) void {
         self.hash_map.allocator.free(value);
     }
 
-    fn copy(self: EnvMap, value: []const u8) ![]u8 {
+    fn copy(self: *const EnvMap, value: []const u8) ![]u8 {
         return self.hash_map.allocator.dupe(u8, value);
     }
 };

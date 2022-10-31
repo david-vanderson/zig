@@ -420,7 +420,7 @@ pub const File = struct {
 
         /// Returns `true` if permissions represent an unwritable file.
         /// On Unix, `true` is returned only if no class has write permissions.
-        pub fn readOnly(self: Self) bool {
+        pub fn readOnly(self: *const Self) bool {
             return self.inner.readOnly();
         }
 
@@ -438,7 +438,7 @@ pub const File = struct {
         const Self = @This();
 
         /// Returns `true` if permissions represent an unwritable file.
-        pub fn readOnly(self: Self) bool {
+        pub fn readOnly(self: *const Self) bool {
             return self.attributes & os.windows.FILE_ATTRIBUTE_READONLY != 0;
         }
 
@@ -460,7 +460,7 @@ pub const File = struct {
 
         /// Returns `true` if permissions represent an unwritable file.
         /// `true` is returned only if no class has write permissions.
-        pub fn readOnly(self: Self) bool {
+        pub fn readOnly(self: *const Self) bool {
             return self.mode & 0o222 == 0;
         }
 
@@ -489,7 +489,7 @@ pub const File = struct {
 
         /// Returns `true` if the chosen class has the selected permission.
         /// This method is only available on Unix platforms.
-        pub fn unixHas(self: Self, class: Class, permission: Permission) bool {
+        pub fn unixHas(self: *const Self, class: Class, permission: Permission) bool {
             const mask = @as(Mode, @enumToInt(permission)) << @as(u3, @enumToInt(class)) * 3;
             return self.mode & mask != 0;
         }
@@ -582,28 +582,28 @@ pub const File = struct {
         const Self = @This();
 
         /// Returns the size of the file
-        pub fn size(self: Self) u64 {
+        pub fn size(self: *const Self) u64 {
             return self.inner.size();
         }
 
         /// Returns a `Permissions` struct, representing the permissions on the file
-        pub fn permissions(self: Self) Permissions {
+        pub fn permissions(self: *const Self) Permissions {
             return self.inner.permissions();
         }
 
         /// Returns the `Kind` of file.
         /// On Windows, can only return: `.File`, `.Directory`, `.SymLink` or `.Unknown`
-        pub fn kind(self: Self) Kind {
+        pub fn kind(self: *const Self) Kind {
             return self.inner.kind();
         }
 
         /// Returns the last time the file was accessed in nanoseconds since UTC 1970-01-01
-        pub fn accessed(self: Self) i128 {
+        pub fn accessed(self: *const Self) i128 {
             return self.inner.accessed();
         }
 
         /// Returns the time the file was modified in nanoseconds since UTC 1970-01-01
-        pub fn modified(self: Self) i128 {
+        pub fn modified(self: *const Self) i128 {
             return self.inner.modified();
         }
 
@@ -612,7 +612,7 @@ pub const File = struct {
         /// On Linux, this returns null if the filesystem does not support creation times, or if the kernel is older than 4.11
         /// On Unices, this returns null if the filesystem or OS does not support creation times
         /// On MacOS, this returns the ctime if the filesystem does not support creation times; this is insanity, and yet another reason to hate on Apple
-        pub fn created(self: Self) ?i128 {
+        pub fn created(self: *const Self) ?i128 {
             return self.inner.created();
         }
     };
@@ -623,17 +623,17 @@ pub const File = struct {
         const Self = @This();
 
         /// Returns the size of the file
-        pub fn size(self: Self) u64 {
+        pub fn size(self: *const Self) u64 {
             return @intCast(u64, self.stat.size);
         }
 
         /// Returns a `Permissions` struct, representing the permissions on the file
-        pub fn permissions(self: Self) Permissions {
+        pub fn permissions(self: *const Self) Permissions {
             return Permissions{ .inner = PermissionsUnix{ .mode = self.stat.mode } };
         }
 
         /// Returns the `Kind` of the file
-        pub fn kind(self: Self) Kind {
+        pub fn kind(self: *const Self) Kind {
             if (builtin.os.tag == .wasi and !builtin.link_libc) return switch (self.stat.filetype) {
                 .BLOCK_DEVICE => Kind.BlockDevice,
                 .CHARACTER_DEVICE => Kind.CharacterDevice,
@@ -667,20 +667,20 @@ pub const File = struct {
         }
 
         /// Returns the last time the file was accessed in nanoseconds since UTC 1970-01-01
-        pub fn accessed(self: Self) i128 {
+        pub fn accessed(self: *const Self) i128 {
             const atime = self.stat.atime();
             return @as(i128, atime.tv_sec) * std.time.ns_per_s + atime.tv_nsec;
         }
 
         /// Returns the last time the file was modified in nanoseconds since UTC 1970-01-01
-        pub fn modified(self: Self) i128 {
+        pub fn modified(self: *const Self) i128 {
             const mtime = self.stat.mtime();
             return @as(i128, mtime.tv_sec) * std.time.ns_per_s + mtime.tv_nsec;
         }
 
         /// Returns the time the file was created in nanoseconds since UTC 1970-01-01
         /// Returns null if this is not supported by the OS or filesystem
-        pub fn created(self: Self) ?i128 {
+        pub fn created(self: *const Self) ?i128 {
             if (!@hasDecl(@TypeOf(self.stat), "birthtime")) return null;
             const birthtime = self.stat.birthtime();
 
@@ -707,17 +707,17 @@ pub const File = struct {
         const Self = @This();
 
         /// Returns the size of the file
-        pub fn size(self: Self) u64 {
+        pub fn size(self: *const Self) u64 {
             return self.statx.size;
         }
 
         /// Returns a `Permissions` struct, representing the permissions on the file
-        pub fn permissions(self: Self) Permissions {
+        pub fn permissions(self: *const Self) Permissions {
             return Permissions{ .inner = PermissionsUnix{ .mode = self.statx.mode } };
         }
 
         /// Returns the `Kind` of the file
-        pub fn kind(self: Self) Kind {
+        pub fn kind(self: *const Self) Kind {
             const m = self.statx.mode & os.S.IFMT;
 
             switch (m) {
@@ -735,18 +735,18 @@ pub const File = struct {
         }
 
         /// Returns the last time the file was accessed in nanoseconds since UTC 1970-01-01
-        pub fn accessed(self: Self) i128 {
+        pub fn accessed(self: *const Self) i128 {
             return @as(i128, self.statx.atime.tv_sec) * std.time.ns_per_s + self.statx.atime.tv_nsec;
         }
 
         /// Returns the last time the file was modified in nanoseconds since UTC 1970-01-01
-        pub fn modified(self: Self) i128 {
+        pub fn modified(self: *const Self) i128 {
             return @as(i128, self.statx.mtime.tv_sec) * std.time.ns_per_s + self.statx.mtime.tv_nsec;
         }
 
         /// Returns the time the file was created in nanoseconds since UTC 1970-01-01
         /// Returns null if this is not supported by the filesystem, or on kernels before than version 4.11
-        pub fn created(self: Self) ?i128 {
+        pub fn created(self: *const Self) ?i128 {
             if (self.statx.mask & os.linux.STATX_BTIME == 0) return null;
             return @as(i128, self.statx.btime.tv_sec) * std.time.ns_per_s + self.statx.btime.tv_nsec;
         }
@@ -763,18 +763,18 @@ pub const File = struct {
         const Self = @This();
 
         /// Returns the size of the file
-        pub fn size(self: Self) u64 {
+        pub fn size(self: *const Self) u64 {
             return self._size;
         }
 
         /// Returns a `Permissions` struct, representing the permissions on the file
-        pub fn permissions(self: Self) Permissions {
+        pub fn permissions(self: *const Self) Permissions {
             return Permissions{ .inner = PermissionsWindows{ .attributes = self.attributes } };
         }
 
         /// Returns the `Kind` of the file.
         /// Can only return: `.File`, `.Directory`, `.SymLink` or `.Unknown`
-        pub fn kind(self: Self) Kind {
+        pub fn kind(self: *const Self) Kind {
             if (self.attributes & windows.FILE_ATTRIBUTE_REPARSE_POINT != 0) {
                 if (self.reparse_tag & 0x20000000 != 0) {
                     return .SymLink;
@@ -788,18 +788,18 @@ pub const File = struct {
         }
 
         /// Returns the last time the file was accessed in nanoseconds since UTC 1970-01-01
-        pub fn accessed(self: Self) i128 {
+        pub fn accessed(self: *const Self) i128 {
             return self.access_time;
         }
 
         /// Returns the time the file was modified in nanoseconds since UTC 1970-01-01
-        pub fn modified(self: Self) i128 {
+        pub fn modified(self: *const Self) i128 {
             return self.modified_time;
         }
 
         /// Returns the time the file was created in nanoseconds since UTC 1970-01-01
         /// This never returns null, only returning an optional for compatibility with other OSes
-        pub fn created(self: Self) ?i128 {
+        pub fn created(self: *const Self) ?i128 {
             return self.creation_time;
         }
     };
@@ -1240,7 +1240,7 @@ pub const File = struct {
 
     pub const CopyRangeError = os.CopyFileRangeError;
 
-    pub fn copyRange(in: File, in_offset: u64, out: File, out_offset: u64, len: u64) CopyRangeError!u64 {
+    pub fn copyRange(in: *const File, in_offset: u64, out: File, out_offset: u64, len: u64) CopyRangeError!u64 {
         const adjusted_len = math.cast(usize, len) orelse math.maxInt(usize);
         const result = try os.copy_file_range(in.handle, in_offset, out.handle, out_offset, adjusted_len, 0);
         return result;
@@ -1248,7 +1248,7 @@ pub const File = struct {
 
     /// Returns the number of bytes copied. If the number read is smaller than `buffer.len`, it
     /// means the in file reached the end. Reaching the end of a file is not an error condition.
-    pub fn copyRangeAll(in: File, in_offset: u64, out: File, out_offset: u64, len: u64) CopyRangeError!u64 {
+    pub fn copyRangeAll(in: *const File, in_offset: u64, out: File, out_offset: u64, len: u64) CopyRangeError!u64 {
         var total_bytes_copied: u64 = 0;
         var in_off = in_offset;
         var out_off = out_offset;
@@ -1384,8 +1384,8 @@ pub const File = struct {
 
     pub const Reader = io.Reader(File, ReadError, readFn);
 
-    pub fn reader(file: File) Reader {
-        return .{ .context = file };
+    pub fn reader(file: *const File) Reader {
+        return .{ .context = file.* };
     }
 
     pub const Writer = io.Writer(File, WriteError, writeFn);

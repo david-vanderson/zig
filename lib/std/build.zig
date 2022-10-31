@@ -1086,7 +1086,7 @@ pub const Builder = struct {
             log.info("cp {s} {s} ", .{ source_path, dest_path });
         }
         const cwd = fs.cwd();
-        const prev_status = try fs.Dir.updateFile(cwd, source_path, cwd, dest_path, .{});
+        const prev_status = try cwd.updateFile(source_path, cwd, dest_path, .{});
         if (self.verbose) switch (prev_status) {
             .stale => log.info("# installed", .{}),
             .fresh => log.info("# up-to-date", .{}),
@@ -1391,7 +1391,7 @@ pub const GeneratedFile = struct {
     /// This value must be set in the `fn make()` of the `step` and must not be `null` afterwards.
     path: ?[]const u8 = null,
 
-    pub fn getPath(self: GeneratedFile) []const u8 {
+    pub fn getPath(self: *const GeneratedFile) []const u8 {
         return self.path orelse std.debug.panic(
             "getPath() was called on a GeneratedFile that wasn't build yet. Is there a missing Step dependency on step '{s}'?",
             .{self.step.name},
@@ -1418,24 +1418,24 @@ pub const FileSource = union(enum) {
 
     /// Returns a string that can be shown to represent the file source.
     /// Either returns the path or `"generated"`.
-    pub fn getDisplayName(self: FileSource) []const u8 {
-        return switch (self) {
+    pub fn getDisplayName(self: *const FileSource) []const u8 {
+        return switch (self.*) {
             .path => self.path,
             .generated => "generated",
         };
     }
 
     /// Adds dependencies this file source implies to the given step.
-    pub fn addStepDependencies(self: FileSource, step: *Step) void {
-        switch (self) {
+    pub fn addStepDependencies(self: *const FileSource, step: *Step) void {
+        switch (self.*) {
             .path => {},
             .generated => |gen| step.dependOn(gen.step),
         }
     }
 
     /// Should only be called during make(), returns a path relative to the build root or absolute.
-    pub fn getPath(self: FileSource, builder: *Builder) []const u8 {
-        const path = switch (self) {
+    pub fn getPath(self: *const FileSource, builder: *Builder) []const u8 {
+        const path = switch (self.*) {
             .path => |p| builder.pathFromRoot(p),
             .generated => |gen| gen.getPath(),
         };
@@ -1443,8 +1443,8 @@ pub const FileSource = union(enum) {
     }
 
     /// Duplicates the file source for a given builder.
-    pub fn dupe(self: FileSource, b: *Builder) FileSource {
-        return switch (self) {
+    pub fn dupe(self: *const FileSource, b: *Builder) FileSource {
+        return switch (self.*) {
             .path => |p| .{ .path = b.dupePath(p) },
             .generated => |gen| .{ .generated = gen },
         };
@@ -3745,7 +3745,7 @@ pub const InstalledFile = struct {
     path: []const u8,
 
     /// Duplicates the installed file path and directory.
-    pub fn dupe(self: InstalledFile, builder: *Builder) InstalledFile {
+    pub fn dupe(self: *const InstalledFile, builder: *Builder) InstalledFile {
         return .{
             .dir = self.dir.dupe(builder),
             .path = builder.dupe(self.path),

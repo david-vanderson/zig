@@ -33,8 +33,8 @@ pub const Address = union(enum) {
     }
 
     /// Re-interpret an IP address into a generic socket address.
-    pub fn into(self: ip.Address) Socket.Address {
-        return switch (self) {
+    pub fn into(self: *const ip.Address) Socket.Address {
+        return switch (self.*) {
             .ipv4 => |ipv4_address| .{ .ipv4 = ipv4_address },
             .ipv6 => |ipv6_address| .{ .ipv6 = ipv6_address },
         };

@@ -48,7 +48,7 @@ pub const Edwards25519 = struct {
     }
 
     /// Encode an Edwards25519 point.
-    pub fn toBytes(p: Edwards25519) [encoded_length]u8 {
+    pub fn toBytes(p: *const Edwards25519) [encoded_length]u8 {
         const zi = p.z.invert();
         var s = p.y.mul(zi).toBytes();
         s[31] ^= @as(u8, @boolToInt(p.x.mul(zi).isNegative())) << 7;
@@ -72,24 +72,24 @@ pub const Edwards25519 = struct {
     pub const identityElement = Edwards25519{ .x = Fe.zero, .y = Fe.one, .z = Fe.one, .t = Fe.zero };
 
     /// Reject the neutral element.
-    pub fn rejectIdentity(p: Edwards25519) IdentityElementError!void {
+    pub fn rejectIdentity(p: *const Edwards25519) IdentityElementError!void {
         if (p.x.isZero()) {
             return error.IdentityElement;
         }
     }
 
     /// Multiply a point by the cofactor
-    pub fn clearCofactor(p: Edwards25519) Edwards25519 {
+    pub fn clearCofactor(p: *const Edwards25519) Edwards25519 {
         return p.dbl().dbl().dbl();
     }
 
     /// Flip the sign of the X coordinate.
-    pub inline fn neg(p: Edwards25519) Edwards25519 {
+    pub inline fn neg(p: *const Edwards25519) Edwards25519 {
         return .{ .x = p.x.neg(), .y = p.y, .z = p.z, .t = p.t.neg() };
     }
 
     /// Double an Edwards25519 point.
-    pub fn dbl(p: Edwards25519) Edwards25519 {
+    pub fn dbl(p: *const Edwards25519) Edwards25519 {
         const t0 = p.x.add(p.y).sq();
         var x = p.x.sq();
         var z = p.y.sq();
@@ -106,7 +106,7 @@ pub const Edwards25519 = struct {
     }
 
     /// Add two Edwards25519 points.
-    pub fn add(p: Edwards25519, q: Edwards25519) Edwards25519 {
+    pub fn add(p: *const Edwards25519, q: Edwards25519) Edwards25519 {
         const a = p.y.sub(p.x).mul(q.y.sub(q.x));
         const b = p.x.add(p.y).mul(q.x.add(q.y));
         const c = p.t.mul(q.t).mul(Fe.edwards25519d2);
@@ -125,7 +125,7 @@ pub const Edwards25519 = struct {
     }
 
     /// Substract two Edwards25519 points.
-    pub fn sub(p: Edwards25519, q: Edwards25519) Edwards25519 {
+    pub fn sub(p: *const Edwards25519, q: Edwards25519) Edwards25519 {
         return p.add(q.neg());
     }
 
@@ -220,16 +220,16 @@ pub const Edwards25519 = struct {
     }
 
     const basePointPc = pc: {
-        @setEvalBranchQuota(10000);
+        @setEvalBranchQuota(5000);
         break :pc precompute(Edwards25519.basePoint, 15);
     };
 
     /// Multiply an Edwards25519 point by a scalar without clamping it.
     /// Return error.WeakPublicKey if the base generates a small-order group,
     /// and error.IdentityElement if the result is the identity element.
-    pub fn mul(p: Edwards25519, s: [32]u8) (IdentityElementError || WeakPublicKeyError)!Edwards25519 {
+    pub fn mul(p: *const Edwards25519, s: [32]u8) (IdentityElementError || WeakPublicKeyError)!Edwards25519 {
         const pc = if (p.is_base) basePointPc else pc: {
-            const xpc = precompute(p, 15);
+            const xpc = precompute(p.*, 15);
             xpc[4].rejectIdentity() catch return error.WeakPublicKey;
             break :pc xpc;
         };
@@ -238,11 +238,11 @@ pub const Edwards25519 = struct {
 
     /// Multiply an Edwards25519 point by a *PUBLIC* scalar *IN VARIABLE TIME*
     /// This can be used for signature verification.
-    pub fn mulPublic(p: Edwards25519, s: [32]u8) (IdentityElementError || WeakPublicKeyError)!Edwards25519 {
+    pub fn mulPublic(p: *const Edwards25519, s: [32]u8) (IdentityElementError || WeakPublicKeyError)!Edwards25519 {
         if (p.is_base) {
             return pcMul16(&basePointPc, s, true);
         } else {
-            const pc = precompute(p, 8);
+            const pc = precompute(p.*, 8);
             pc[4].rejectIdentity() catch return error.WeakPublicKey;
             return pcMul(&pc, s, true);
         }
@@ -250,10 +250,10 @@ pub const Edwards25519 = struct {
 
     /// Double-base multiplication of public parameters - Compute (p1*s1)+(p2*s2) *IN VARIABLE TIME*
     /// This can be used for signature verification.
-    pub fn mulDoubleBasePublic(p1: Edwards25519, s1: [32]u8, p2: Edwards25519, s2: [32]u8) (IdentityElementError || WeakPublicKeyError)!Edwards25519 {
+    pub fn mulDoubleBasePublic(p1: *const Edwards25519, s1: [32]u8, p2: Edwards25519, s2: [32]u8) (IdentityElementError || WeakPublicKeyError)!Edwards25519 {
         var pc1_array: [9]Edwards25519 = undefined;
         const pc1 = if (p1.is_base) basePointPc[0..9] else pc: {
-            pc1_array = precompute(p1, 8);
+            pc1_array = precompute(p1.*, 8);
             pc1_array[4].rejectIdentity() catch return error.WeakPublicKey;
             break :pc &pc1_array;
         };
@@ -331,7 +331,7 @@ pub const Edwards25519 = struct {
     /// This is strongly recommended for DH operations.
     /// Return error.WeakPublicKey if the resulting point is
     /// the identity element.
-    pub fn clampedMul(p: Edwards25519, s: [32]u8) (IdentityElementError || WeakPublicKeyError)!Edwards25519 {
+    pub fn clampedMul(p: *const Edwards25519, s: [32]u8) (IdentityElementError || WeakPublicKeyError)!Edwards25519 {
         var t: [32]u8 = s;
         scalar.clamp(&t);
         return mul(p, t);

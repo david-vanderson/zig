@@ -77,20 +77,20 @@ pub fn IntegerBitSet(comptime size: u16) type {
         }
 
         /// Returns the number of bits in this bit set
-        pub inline fn capacity(self: Self) usize {
+        pub inline fn capacity(self: *const Self) usize {
             _ = self;
             return bit_length;
         }
 
         /// Returns true if the bit at the specified index
         /// is present in the set, false otherwise.
-        pub fn isSet(self: Self, index: usize) bool {
+        pub fn isSet(self: *const Self, index: usize) bool {
             assert(index < bit_length);
             return (self.mask & maskBit(index)) != 0;
         }
 
         /// Returns the total number of set bits in this bit set.
-        pub fn count(self: Self) usize {
+        pub fn count(self: *const Self) usize {
             return @popCount(self.mask);
         }
 
@@ -176,7 +176,7 @@ pub fn IntegerBitSet(comptime size: u16) type {
 
         /// Finds the index of the first set bit.
         /// If no bits are set, returns null.
-        pub fn findFirstSet(self: Self) ?usize {
+        pub fn findFirstSet(self: *const Self) ?usize {
             const mask = self.mask;
             if (mask == 0) return null;
             return @ctz(mask);
@@ -330,21 +330,21 @@ pub fn ArrayBitSet(comptime MaskIntType: type, comptime size: usize) type {
         }
 
         /// Returns the number of bits in this bit set
-        pub inline fn capacity(self: Self) usize {
+        pub inline fn capacity(self: *const Self) usize {
             _ = self;
             return bit_length;
         }
 
         /// Returns true if the bit at the specified index
         /// is present in the set, false otherwise.
-        pub fn isSet(self: Self, index: usize) bool {
+        pub fn isSet(self: *const Self, index: usize) bool {
             assert(index < bit_length);
             if (num_masks == 0) return false; // doesn't compile in this case
             return (self.masks[maskIndex(index)] & maskBit(index)) != 0;
         }
 
         /// Returns the total number of set bits in this bit set.
-        pub fn count(self: Self) usize {
+        pub fn count(self: *const Self) usize {
             var total: usize = 0;
             for (self.masks) |mask| {
                 total += @popCount(mask);
@@ -469,7 +469,7 @@ pub fn ArrayBitSet(comptime MaskIntType: type, comptime size: usize) type {
 
         /// Finds the index of the first set bit.
         /// If no bits are set, returns null.
-        pub fn findFirstSet(self: Self) ?usize {
+        pub fn findFirstSet(self: *const Self) ?usize {
             var offset: usize = 0;
             const mask = for (self.masks) |mask| {
                 if (mask != 0) break mask;
@@ -640,19 +640,19 @@ pub const DynamicBitSetUnmanaged = struct {
     }
 
     /// Returns the number of bits in this bit set
-    pub inline fn capacity(self: Self) usize {
+    pub inline fn capacity(self: *const Self) usize {
         return self.bit_length;
     }
 
     /// Returns true if the bit at the specified index
     /// is present in the set, false otherwise.
-    pub fn isSet(self: Self, index: usize) bool {
+    pub fn isSet(self: *const Self, index: usize) bool {
         assert(index < self.bit_length);
         return (self.masks[maskIndex(index)] & maskBit(index)) != 0;
     }
 
     /// Returns the total number of set bits in this bit set.
-    pub fn count(self: Self) usize {
+    pub fn count(self: *const Self) usize {
         const num_masks = (self.bit_length + (@bitSizeOf(MaskInt) - 1)) / @bitSizeOf(MaskInt);
         var total: usize = 0;
         for (self.masks[0..num_masks]) |mask| {
@@ -787,7 +787,7 @@ pub const DynamicBitSetUnmanaged = struct {
 
     /// Finds the index of the first set bit.
     /// If no bits are set, returns null.
-    pub fn findFirstSet(self: Self) ?usize {
+    pub fn findFirstSet(self: *const Self) ?usize {
         var offset: usize = 0;
         var mask = self.masks;
         while (offset < self.bit_length) {
@@ -899,18 +899,18 @@ pub const DynamicBitSet = struct {
     }
 
     /// Returns the number of bits in this bit set
-    pub inline fn capacity(self: Self) usize {
+    pub inline fn capacity(self: *const Self) usize {
         return self.unmanaged.capacity();
     }
 
     /// Returns true if the bit at the specified index
     /// is present in the set, false otherwise.
-    pub fn isSet(self: Self, index: usize) bool {
+    pub fn isSet(self: *const Self, index: usize) bool {
         return self.unmanaged.isSet(index);
     }
 
     /// Returns the total number of set bits in this bit set.
-    pub fn count(self: Self) usize {
+    pub fn count(self: *const Self) usize {
         return self.unmanaged.count();
     }
 
@@ -971,7 +971,7 @@ pub const DynamicBitSet = struct {
 
     /// Finds the index of the first set bit.
     /// If no bits are set, returns null.
-    pub fn findFirstSet(self: Self) ?usize {
+    pub fn findFirstSet(self: *const Self) ?usize {
         return self.unmanaged.findFirstSet();
     }
 

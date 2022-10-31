@@ -95,17 +95,17 @@ pub const Client = struct {
     }
 
     /// Closes the client.
-    pub fn deinit(self: Client) void {
+    pub fn deinit(self: *const Client) void {
         self.socket.deinit();
     }
 
     /// Shutdown either the read side, write side, or all sides of the client's underlying socket.
-    pub fn shutdown(self: Client, how: os.ShutdownHow) !void {
+    pub fn shutdown(self: *const Client, how: os.ShutdownHow) !void {
         return self.socket.shutdown(how);
     }
 
     /// Have the client attempt to the connect to an address.
-    pub fn connect(self: Client, address: ip.Address) !void {
+    pub fn connect(self: *const Client, address: ip.Address) !void {
         return self.socket.connect(address.into());
     }
 
@@ -116,63 +116,63 @@ pub const Client = struct {
     }
 
     /// Wrap `tcp.Client` into `std.io.Reader`.
-    pub fn reader(self: Client, flags: u32) io.Reader(Client.Reader, ErrorSetOf(Client.Reader.read), Client.Reader.read) {
-        return .{ .context = .{ .client = self, .flags = flags } };
+    pub fn reader(self: *const Client, flags: u32) io.Reader(Client.Reader, ErrorSetOf(Client.Reader.read), Client.Reader.read) {
+        return .{ .context = .{ .client = self.*, .flags = flags } };
     }
 
     /// Wrap `tcp.Client` into `std.io.Writer`.
     pub fn writer(self: Client, flags: u32) io.Writer(Client.Writer, ErrorSetOf(Client.Writer.write), Client.Writer.write) {
-        return .{ .context = .{ .client = self, .flags = flags } };
+        return .{ .context = .{ .client = self.*, .flags = flags } };
     }
 
     /// Read data from the socket into the buffer provided with a set of flags
     /// specified. It returns the number of bytes read into the buffer provided.
-    pub fn read(self: Client, buf: []u8, flags: u32) !usize {
+    pub fn read(self: *const Client, buf: []u8, flags: u32) !usize {
         return self.socket.read(buf, flags);
     }
 
     /// Write a buffer of data provided to the socket with a set of flags specified.
     /// It returns the number of bytes that are written to the socket.
-    pub fn write(self: Client, buf: []const u8, flags: u32) !usize {
+    pub fn write(self: *const Client, buf: []const u8, flags: u32) !usize {
         return self.socket.write(buf, flags);
     }
 
     /// Writes multiple I/O vectors with a prepended message header to the socket
     /// with a set of flags specified. It returns the number of bytes that are
     /// written to the socket.
-    pub fn writeMessage(self: Client, msg: Socket.Message, flags: u32) !usize {
+    pub fn writeMessage(self: *const Client, msg: Socket.Message, flags: u32) !usize {
         return self.socket.writeMessage(msg, flags);
     }
 
     /// Read multiple I/O vectors with a prepended message header from the socket
     /// with a set of flags specified. It returns the number of bytes that were
     /// read into the buffer provided.
-    pub fn readMessage(self: Client, msg: *Socket.Message, flags: u32) !usize {
+    pub fn readMessage(self: *const Client, msg: *Socket.Message, flags: u32) !usize {
         return self.socket.readMessage(msg, flags);
     }
 
     /// Query and return the latest cached error on the client's underlying socket.
-    pub fn getError(self: Client) !void {
+    pub fn getError(self: *const Client) !void {
         return self.socket.getError();
     }
 
     /// Query the read buffer size of the client's underlying socket.
-    pub fn getReadBufferSize(self: Client) !u32 {
+    pub fn getReadBufferSize(self: *const Client) !u32 {
         return self.socket.getReadBufferSize();
     }
 
     /// Query the write buffer size of the client's underlying socket.
-    pub fn getWriteBufferSize(self: Client) !u32 {
+    pub fn getWriteBufferSize(self: *const Client) !u32 {
         return self.socket.getWriteBufferSize();
     }
 
     /// Query the address that the client's socket is locally bounded to.
-    pub fn getLocalAddress(self: Client) !ip.Address {
+    pub fn getLocalAddress(self: *const Client) !ip.Address {
         return ip.Address.from(try self.socket.getLocalAddress());
     }
 
     /// Query the address that the socket is connected to.
-    pub fn getRemoteAddress(self: Client) !ip.Address {
+    pub fn getRemoteAddress(self: *const Client) !ip.Address {
         return ip.Address.from(try self.socket.getRemoteAddress());
     }
 
@@ -180,20 +180,20 @@ pub const Client = struct {
     /// sent, or if the timeout specified in seconds has been reached. It returns `error.UnsupportedSocketOption`
     /// if the host does not support the option for a socket to linger around up until a timeout specified in
     /// seconds.
-    pub fn setLinger(self: Client, timeout_seconds: ?u16) !void {
+    pub fn setLinger(self: *const Client, timeout_seconds: ?u16) !void {
         return self.socket.setLinger(timeout_seconds);
     }
 
     /// Have keep-alive messages be sent periodically. The timing in which keep-alive messages are sent are
     /// dependant on operating system settings. It returns `error.UnsupportedSocketOption` if the host does
     /// not support periodically sending keep-alive messages on connection-oriented sockets.
-    pub fn setKeepAlive(self: Client, enabled: bool) !void {
+    pub fn setKeepAlive(self: *const Client, enabled: bool) !void {
         return self.socket.setKeepAlive(enabled);
     }
 
     /// Disable Nagle's algorithm on a TCP socket. It returns `error.UnsupportedSocketOption` if
     /// the host does not support sockets disabling Nagle's algorithm.
-    pub fn setNoDelay(self: Client, enabled: bool) !void {
+    pub fn setNoDelay(self: *const Client, enabled: bool) !void {
         if (@hasDecl(os.TCP, "NODELAY")) {
             const bytes = mem.asBytes(&@as(usize, @boolToInt(enabled)));
             return self.socket.setOption(os.IPPROTO.TCP, os.TCP.NODELAY, bytes);
@@ -203,7 +203,7 @@ pub const Client = struct {
 
     /// Enables TCP Quick ACK on a TCP socket to immediately send rather than delay ACKs when necessary. It returns
     /// `error.UnsupportedSocketOption` if the host does not support TCP Quick ACK.
-    pub fn setQuickACK(self: Client, enabled: bool) !void {
+    pub fn setQuickACK(self: *const Client, enabled: bool) !void {
         if (@hasDecl(os.TCP, "QUICKACK")) {
             return self.socket.setOption(os.IPPROTO.TCP, os.TCP.QUICKACK, mem.asBytes(&@as(u32, @boolToInt(enabled))));
         }
@@ -211,19 +211,19 @@ pub const Client = struct {
     }
 
     /// Set the write buffer size of the socket.
-    pub fn setWriteBufferSize(self: Client, size: u32) !void {
+    pub fn setWriteBufferSize(self: *const Client, size: u32) !void {
         return self.socket.setWriteBufferSize(size);
     }
 
     /// Set the read buffer size of the socket.
-    pub fn setReadBufferSize(self: Client, size: u32) !void {
+    pub fn setReadBufferSize(self: *const Client, size: u32) !void {
         return self.socket.setReadBufferSize(size);
     }
 
     /// Set a timeout on the socket that is to occur if no messages are successfully written
     /// to its bound destination after a specified number of milliseconds. A subsequent write
     /// to the socket will thereafter return `error.WouldBlock` should the timeout be exceeded.
-    pub fn setWriteTimeout(self: Client, milliseconds: u32) !void {
+    pub fn setWriteTimeout(self: *const Client, milliseconds: u32) !void {
         return self.socket.setWriteTimeout(milliseconds);
     }
 
@@ -231,7 +231,7 @@ pub const Client = struct {
     /// from its bound destination after a specified number of milliseconds. A subsequent
     /// read from the socket will thereafter return `error.WouldBlock` should the timeout be
     /// exceeded.
-    pub fn setReadTimeout(self: Client, milliseconds: u32) !void {
+    pub fn setReadTimeout(self: *const Client, milliseconds: u32) !void {
         return self.socket.setReadTimeout(milliseconds);
     }
 };
@@ -253,58 +253,58 @@ pub const Listener = struct {
     }
 
     /// Closes the listener.
-    pub fn deinit(self: Listener) void {
+    pub fn deinit(self: *const Listener) void {
         self.socket.deinit();
     }
 
     /// Shuts down the underlying listener's socket. The next subsequent call, or
     /// a current pending call to accept() after shutdown is called will return
     /// an error.
-    pub fn shutdown(self: Listener) !void {
+    pub fn shutdown(self: *const Listener) !void {
         return self.socket.shutdown(.recv);
     }
 
     /// Binds the listener's socket to an address.
-    pub fn bind(self: Listener, address: ip.Address) !void {
+    pub fn bind(self: *const Listener, address: ip.Address) !void {
         return self.socket.bind(address.into());
     }
 
     /// Start listening for incoming connections.
-    pub fn listen(self: Listener, max_backlog_size: u31) !void {
+    pub fn listen(self: *const Listener, max_backlog_size: u31) !void {
         return self.socket.listen(max_backlog_size);
     }
 
     /// Accept a pending incoming connection queued to the kernel backlog
     /// of the listener's socket.
-    pub fn accept(self: Listener, flags: std.enums.EnumFieldStruct(Socket.InitFlags, bool, false)) !tcp.Connection {
+    pub fn accept(self: *const Listener, flags: std.enums.EnumFieldStruct(Socket.InitFlags, bool, false)) !tcp.Connection {
         return tcp.Connection.from(try self.socket.accept(flags));
     }
 
     /// Query and return the latest cached error on the listener's underlying socket.
-    pub fn getError(self: Client) !void {
+    pub fn getError(self: *const Client) !void {
         return self.socket.getError();
     }
 
     /// Query the address that the listener's socket is locally bounded to.
-    pub fn getLocalAddress(self: Listener) !ip.Address {
+    pub fn getLocalAddress(self: *const Listener) !ip.Address {
         return ip.Address.from(try self.socket.getLocalAddress());
     }
 
     /// Allow multiple sockets on the same host to listen on the same address. It returns `error.UnsupportedSocketOption` if
     /// the host does not support sockets listening the same address.
-    pub fn setReuseAddress(self: Listener, enabled: bool) !void {
+    pub fn setReuseAddress(self: *const Listener, enabled: bool) !void {
         return self.socket.setReuseAddress(enabled);
     }
 
     /// Allow multiple sockets on the same host to listen on the same port. It returns `error.UnsupportedSocketOption` if
     /// the host does not supports sockets listening on the same port.
-    pub fn setReusePort(self: Listener, enabled: bool) !void {
+    pub fn setReusePort(self: *const Listener, enabled: bool) !void {
         return self.socket.setReusePort(enabled);
     }
 
     /// Enables TCP Fast Open (RFC 7413) on a TCP socket. It returns `error.UnsupportedSocketOption` if the host does not
     /// support TCP Fast Open.
-    pub fn setFastOpen(self: Listener, enabled: bool) !void {
+    pub fn setFastOpen(self: *const Listener, enabled: bool) !void {
         if (@hasDecl(os.TCP, "FASTOPEN")) {
             return self.socket.setOption(os.IPPROTO.TCP, os.TCP.FASTOPEN, mem.asBytes(&@as(u32, @boolToInt(enabled))));
         }
@@ -314,7 +314,7 @@ pub const Listener = struct {
     /// Set a timeout on the listener that is to occur if no new incoming connections come in
     /// after a specified number of milliseconds. A subsequent accept call to the listener
     /// will thereafter return `error.WouldBlock` should the timeout be exceeded.
-    pub fn setAcceptTimeout(self: Listener, milliseconds: usize) !void {
+    pub fn setAcceptTimeout(self: *const Listener, milliseconds: usize) !void {
         return self.socket.setReadTimeout(milliseconds);
     }
 };

@@ -88,7 +88,7 @@ pub const Token = union(enum) {
         /// Whether string contains an escape sequence and cannot be zero-copied
         escapes: StringEscapes,
 
-        pub fn decodedLength(self: @This()) usize {
+        pub fn decodedLength(self: *const @This()) usize {
             return self.count +% switch (self.escapes) {
                 .None => 0,
                 .Some => |s| @bitCast(usize, s.size_diff),
@@ -96,7 +96,7 @@ pub const Token = union(enum) {
         }
 
         /// Slice into the underlying input string.
-        pub fn slice(self: @This(), input: []const u8, i: usize) []const u8 {
+        pub fn slice(self: *const @This(), input: []const u8, i: usize) []const u8 {
             return input[i - self.count .. i];
         }
     },
@@ -108,7 +108,7 @@ pub const Token = union(enum) {
         is_integer: bool,
 
         /// Slice into the underlying input string.
-        pub fn slice(self: @This(), input: []const u8, i: usize) []const u8 {
+        pub fn slice(self: *const @This(), input: []const u8, i: usize) []const u8 {
             return input[i - self.count .. i];
         }
     },

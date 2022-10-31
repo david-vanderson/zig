@@ -225,7 +225,7 @@ pub fn PackedIntArrayEndian(comptime Int: type, comptime endian: Endian, comptim
         }
 
         /// Return the integer stored at `index`.
-        pub fn get(self: Self, index: usize) Int {
+        pub fn get(self: *const Self, index: usize) Int {
             debug.assert(index < int_count);
             return Io.get(&self.bytes, index, 0);
         }
@@ -305,7 +305,7 @@ pub fn PackedIntSliceEndian(comptime Int: type, comptime endian: Endian) type {
         }
 
         /// Return the integer stored at `index`.
-        pub fn get(self: Self, index: usize) Int {
+        pub fn get(self: *const Self, index: usize) Int {
             debug.assert(index < self.len);
             return Io.get(self.bytes, index, self.bit_offset);
         }
@@ -317,7 +317,7 @@ pub fn PackedIntSliceEndian(comptime Int: type, comptime endian: Endian) type {
         }
 
         /// Create a PackedIntSlice of this slice from `start` to `end`.
-        pub fn slice(self: Self, start: usize, end: usize) PackedIntSliceEndian(Int, endian) {
+        pub fn slice(self: *const Self, start: usize, end: usize) PackedIntSliceEndian(Int, endian) {
             debug.assert(start < self.len);
             debug.assert(end <= self.len);
             return Io.slice(self.bytes, self.bit_offset, start, end);
@@ -325,14 +325,14 @@ pub fn PackedIntSliceEndian(comptime Int: type, comptime endian: Endian) type {
 
         /// Create a PackedIntSlice of the sclice using `NewInt` as the integer type.
         /// `NewInt`'s bit width must fit evenly within the slice's `Int`'s total bits.
-        pub fn sliceCast(self: Self, comptime NewInt: type) PackedIntSliceEndian(NewInt, endian) {
+        pub fn sliceCast(self: *const Self, comptime NewInt: type) PackedIntSliceEndian(NewInt, endian) {
             return self.sliceCastEndian(NewInt, endian);
         }
 
         /// Create a PackedIntSliceEndian of the slice using `NewInt` as the integer type
         /// and `new_endian` as the new endianess. `NewInt`'s bit width must fit evenly
         /// within the slice's `Int`'s total bits.
-        pub fn sliceCastEndian(self: Self, comptime NewInt: type, comptime new_endian: Endian) PackedIntSliceEndian(NewInt, new_endian) {
+        pub fn sliceCastEndian(self: *const Self, comptime NewInt: type, comptime new_endian: Endian) PackedIntSliceEndian(NewInt, new_endian) {
             return Io.sliceCast(self.bytes, NewInt, new_endian, self.bit_offset, self.len);
         }
     };

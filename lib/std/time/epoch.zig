@@ -113,7 +113,7 @@ pub const YearAndDay = struct {
     /// The number of days into the year (0 to 365)
     day: u9,
 
-    pub fn calculateMonthDay(self: YearAndDay) MonthAndDay {
+    pub fn calculateMonthDay(self: *const YearAndDay) MonthAndDay {
         var month: Month = .jan;
         var days_left = self.day;
         const leap_kind: YearLeapKind = if (isLeapYear(self.year)) .leap else .not_leap;
@@ -136,7 +136,7 @@ pub const MonthAndDay = struct {
 // days since epoch Oct 1, 1970
 pub const EpochDay = struct {
     day: u47, // u47 = u64 - u17 (because day = sec(u64) / secs_per_day(u17)
-    pub fn calculateYearDay(self: EpochDay) YearAndDay {
+    pub fn calculateYearDay(self: *const EpochDay) YearAndDay {
         var year_day = self.day;
         var year: Year = epoch_year;
         while (true) {
@@ -155,15 +155,15 @@ pub const DaySeconds = struct {
     secs: u17, // max is 24*60*60 = 86400
 
     /// the number of hours past the start of the day (0 to 23)
-    pub fn getHoursIntoDay(self: DaySeconds) u5 {
+    pub fn getHoursIntoDay(self: *const DaySeconds) u5 {
         return @intCast(u5, @divTrunc(self.secs, 3600));
     }
     /// the number of minutes past the hour (0 to 59)
-    pub fn getMinutesIntoHour(self: DaySeconds) u6 {
+    pub fn getMinutesIntoHour(self: *const DaySeconds) u6 {
         return @intCast(u6, @divTrunc(@mod(self.secs, 3600), 60));
     }
     /// the number of seconds past the start of the minute (0 to 59)
-    pub fn getSecondsIntoMinute(self: DaySeconds) u6 {
+    pub fn getSecondsIntoMinute(self: *const DaySeconds) u6 {
         return math.comptimeMod(self.secs, 60);
     }
 };
@@ -174,13 +174,13 @@ pub const EpochSeconds = struct {
 
     /// Returns the number of days since the epoch as an EpochDay.
     /// Use EpochDay to get information about the day of this time.
-    pub fn getEpochDay(self: EpochSeconds) EpochDay {
+    pub fn getEpochDay(self: *const EpochSeconds) EpochDay {
         return EpochDay{ .day = @intCast(u47, @divTrunc(self.secs, secs_per_day)) };
     }
 
     /// Returns the number of seconds into the day as DaySeconds.
     /// Use DaySeconds to get information about the time.
-    pub fn getDaySeconds(self: EpochSeconds) DaySeconds {
+    pub fn getDaySeconds(self: *const EpochSeconds) DaySeconds {
         return DaySeconds{ .secs = math.comptimeMod(self.secs, secs_per_day) };
     }
 };

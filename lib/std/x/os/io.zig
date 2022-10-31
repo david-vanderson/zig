@@ -73,11 +73,11 @@ pub const Reactor = struct {
         return Reactor{ .fd = try os.epoll_create1(raw_flags) };
     }
 
-    pub fn deinit(self: Reactor) void {
+    pub fn deinit(self: *const Reactor) void {
         os.close(self.fd);
     }
 
-    pub fn update(self: Reactor, fd: os.fd_t, identifier: usize, interest: Reactor.Interest) !void {
+    pub fn update(self: *const Reactor, fd: os.fd_t, identifier: usize, interest: Reactor.Interest) !void {
         var flags: u32 = 0;
         flags |= if (interest.oneshot) linux.EPOLL.ONESHOT else linux.EPOLL.ET;
         if (interest.hup) flags |= linux.EPOLL.RDHUP;
@@ -95,7 +95,7 @@ pub const Reactor = struct {
         };
     }
 
-    pub fn poll(self: Reactor, comptime max_num_events: comptime_int, closure: anytype, timeout_milliseconds: ?u64) !void {
+    pub fn poll(self: *const Reactor, comptime max_num_events: comptime_int, closure: anytype, timeout_milliseconds: ?u64) !void {
         var events: [max_num_events]linux.epoll_event = undefined;
 
         const num_events = os.epoll_wait(self.fd, &events, if (timeout_milliseconds) |ms| @intCast(i32, ms) else -1);

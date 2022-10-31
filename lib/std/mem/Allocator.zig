@@ -601,7 +601,7 @@ test "allocBytes non-zero len_align" {
 /// is less than or equal to the old allocation, because it cannot reclaim the memory,
 /// and thus the `std.ArrayList` would be better off retaining its capacity.
 pub fn reallocBytes(
-    self: Allocator,
+    self: *const Allocator,
     /// Must be the same as what was returned from most recent call to `allocFn` or `resizeFn`.
     /// If `old_mem.len == 0` then this is a new allocation and `new_byte_count` must be >= 1.
     old_mem: []u8,

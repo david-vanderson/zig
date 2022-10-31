@@ -318,8 +318,8 @@ pub const Token = struct {
             };
         }
 
-        pub fn symbol(tag: Tag) []const u8 {
-            return tag.lexeme() orelse switch (tag) {
+        pub fn symbol(tag: *const Tag) []const u8 {
+            return tag.lexeme() orelse switch (tag.*) {
                 .invalid => "invalid bytes",
                 .identifier => "an identifier",
                 .string_literal, .multiline_string_literal_line => "a string literal",

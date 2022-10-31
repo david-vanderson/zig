@@ -50,7 +50,7 @@ pub const SetNameError = error{
     Unexpected,
 } || os.PrctlError || os.WriteError || std.fs.File.OpenError || std.fmt.BufPrintError;
 
-pub fn setName(self: Thread, name: []const u8) SetNameError!void {
+pub fn setName(self: *const Thread, name: []const u8) SetNameError!void {
     if (name.len > max_name_len) return error.NameTooLong;
 
     const name_with_terminator = blk: {
@@ -164,7 +164,7 @@ pub const GetNameError = error{
     Unexpected,
 } || os.PrctlError || os.ReadError || std.fs.File.OpenError || std.fmt.BufPrintError;
 
-pub fn getName(self: Thread, buffer_ptr: *[max_name_len:0]u8) GetNameError!?[]const u8 {
+pub fn getName(self: *const Thread, buffer_ptr: *[max_name_len:0]u8) GetNameError!?[]const u8 {
     buffer_ptr[max_name_len] = 0;
     var buffer = std.mem.span(buffer_ptr);
 
@@ -332,19 +332,19 @@ pub fn spawn(config: SpawnConfig, comptime function: anytype, args: anytype) Spa
 pub const Handle = Impl.ThreadHandle;
 
 /// Returns the handle of this thread
-pub fn getHandle(self: Thread) Handle {
+pub fn getHandle(self: *const Thread) Handle {
     return self.impl.getHandle();
 }
 
 /// Release the obligation of the caller to call `join()` and have the thread clean up its own resources on completion.
 /// Once called, this consumes the Thread object and invoking any other functions on it is considered undefined behavior.
-pub fn detach(self: Thread) void {
+pub fn detach(self: *const Thread) void {
     return self.impl.detach();
 }
 
 /// Waits for the thread to complete, then deallocates any resources created on `spawn()`.
 /// Once called, this consumes the Thread object and invoking any other functions on it is considered undefined behavior.
-pub fn join(self: Thread) void {
+pub fn join(self: *const Thread) void {
     return self.impl.join();
 }
 
@@ -443,15 +443,15 @@ const UnsupportedImpl = struct {
         return unsupported(.{ config, f, args });
     }
 
-    fn getHandle(self: Impl) ThreadHandle {
+    fn getHandle(self: *const Impl) ThreadHandle {
         return unsupported(self);
     }
 
-    fn detach(self: Impl) void {
+    fn detach(self: *const Impl) void {
         return unsupported(self);
     }
 
-    fn join(self: Impl) void {
+    fn join(self: *const Impl) void {
         return unsupported(self);
     }
 
@@ -483,7 +483,7 @@ const WindowsThreadImpl = struct {
         heap_handle: windows.HANDLE,
         thread_handle: windows.HANDLE = undefined,
 
-        fn free(self: ThreadCompletion) void {
+        fn free(self: *const ThreadCompletion) void {
             const status = windows.kernel32.HeapFree(self.heap_handle, 0, self.heap_ptr);
             assert(status != 0);
         }
@@ -544,11 +544,11 @@ const WindowsThreadImpl = struct {
         return Impl{ .thread = &instance.thread };
     }
 
-    fn getHandle(self: Impl) ThreadHandle {
+    fn getHandle(self: *const Impl) ThreadHandle {
         return self.thread.thread_handle;
     }
 
-    fn detach(self: Impl) void {
+    fn detach(self: *const Impl) void {
         windows.CloseHandle(self.thread.thread_handle);
         switch (self.thread.completion.swap(.detached, .SeqCst)) {
             .running => {},
@@ -557,7 +557,7 @@ const WindowsThreadImpl = struct {
         }
     }
 
-    fn join(self: Impl) void {
+    fn join(self: *const Impl) void {
         windows.WaitForSingleObjectEx(self.thread.thread_handle, windows.INFINITE, false) catch unreachable;
         windows.CloseHandle(self.thread.thread_handle);
         assert(self.thread.completion.load(.SeqCst) == .completed);
@@ -695,11 +695,11 @@ const PosixThreadImpl = struct {
         }
     }
 
-    fn getHandle(self: Impl) ThreadHandle {
+    fn getHandle(self: *const Impl) ThreadHandle {
         return self.handle;
     }
 
-    fn detach(self: Impl) void {
+    fn detach(self: *const Impl) void {
         switch (c.pthread_detach(self.handle)) {
             .SUCCESS => {},
             .INVAL => unreachable, // thread handle is not joinable
@@ -708,7 +708,7 @@ const PosixThreadImpl = struct {
         }
     }
 
-    fn join(self: Impl) void {
+    fn join(self: *const Impl) void {
         switch (c.pthread_join(self.handle, null)) {
             .SUCCESS => {},
             .INVAL => unreachable, // thread handle is not joinable (or another thread is already joining in)
@@ -1008,11 +1008,11 @@ const LinuxThreadImpl = struct {
         }
     }
 
-    fn getHandle(self: Impl) ThreadHandle {
+    fn getHandle(self: *const Impl) ThreadHandle {
         return self.thread.parent_tid;
     }
 
-    fn detach(self: Impl) void {
+    fn detach(self: *const Impl) void {
         switch (self.thread.completion.swap(.detached, .SeqCst)) {
             .running => {},
             .completed => self.join(),
@@ -1020,7 +1020,7 @@ const LinuxThreadImpl = struct {
         }
     }
 
-    fn join(self: Impl) void {
+    fn join(self: *const Impl) void {
         defer os.munmap(self.thread.mapped);
 
         var spin: u8 = 10;

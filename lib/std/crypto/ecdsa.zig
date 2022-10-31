@@ -42,7 +42,7 @@ pub fn Ecdsa(comptime Curve: type, comptime Hash: type) type {
                 return SecretKey{ .bytes = bytes };
             }
 
-            pub fn toBytes(sk: SecretKey) [encoded_length]u8 {
+            pub fn toBytes(sk: *const SecretKey) [encoded_length]u8 {
                 return sk.bytes;
             }
         };
@@ -62,12 +62,12 @@ pub fn Ecdsa(comptime Curve: type, comptime Hash: type) type {
             }
 
             /// Encode the public key using the compressed SEC-1 format.
-            pub fn toCompressedSec1(pk: PublicKey) [compressed_sec1_encoded_length]u8 {
+            pub fn toCompressedSec1(pk: *const PublicKey) [compressed_sec1_encoded_length]u8 {
                 return pk.p.toCompressedSec1();
             }
 
             /// Encoding the public key using the uncompressed SEC-1 format.
-            pub fn toUncompressedSec1(pk: PublicKey) [uncompressed_sec1_encoded_length]u8 {
+            pub fn toUncompressedSec1(pk: *const PublicKey) [uncompressed_sec1_encoded_length]u8 {
                 return pk.p.toUncompressedSec1();
             }
         };
@@ -87,7 +87,7 @@ pub fn Ecdsa(comptime Curve: type, comptime Hash: type) type {
             /// Verify the signature against a message and public key.
             /// Return IdentityElement or NonCanonical if the public key or signature are not in the expected range,
             /// or SignatureVerificationError if the signature is invalid for the given message and key.
-            pub fn verify(self: Signature, msg: []const u8, public_key: PublicKey) (IdentityElementError || NonCanonicalError || SignatureVerificationError)!void {
+            pub fn verify(self: *const Signature, msg: []const u8, public_key: PublicKey) (IdentityElementError || NonCanonicalError || SignatureVerificationError)!void {
                 const r = try Curve.scalar.Scalar.fromBytes(self.r, .Big);
                 const s = try Curve.scalar.Scalar.fromBytes(self.s, .Big);
                 if (r.isZero() or s.isZero()) return error.IdentityElement;
@@ -225,7 +225,7 @@ pub fn Ecdsa(comptime Curve: type, comptime Hash: type) type {
             /// The noise can be null in order to create deterministic signatures.
             /// If deterministic signatures are not required, the noise should be randomly generated instead.
             /// This helps defend against fault attacks.
-            pub fn sign(key_pair: KeyPair, msg: []const u8, noise: ?[noise_length]u8) (IdentityElementError || NonCanonicalError)!Signature {
+            pub fn sign(key_pair: *const KeyPair, msg: []const u8, noise: ?[noise_length]u8) (IdentityElementError || NonCanonicalError)!Signature {
                 const secret_key = key_pair.secret_key;
 
                 var h: [Hash.digest_length]u8 = undefined;
@@ -243,7 +243,7 @@ pub fn Ecdsa(comptime Curve: type, comptime Hash: type) type {
                 if (r.isZero()) return error.IdentityElement;
 
                 const k_inv = k.invert();
-                const zrs = z.add(r.mul(try Curve.scalar.Scalar.fromBytes(secret_key.bytes, .Big)));
+                const zrs = z.add((&r).mul(try Curve.scalar.Scalar.fromBytes(secret_key.bytes, .Big)));
                 const s = k_inv.mul(zrs);
                 if (s.isZero()) return error.IdentityElement;
 

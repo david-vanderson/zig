@@ -206,7 +206,7 @@ const NonAtomicCounter = struct {
     // direct u128 could maybe use xmm ops on x86 which are atomic
     value: [2]u64 = [_]u64{ 0, 0 },
 
-    fn get(self: NonAtomicCounter) u128 {
+    fn get(self: *const NonAtomicCounter) u128 {
         return @bitCast(u128, self.value);
     }
 

@@ -134,13 +134,13 @@ pub const Scalar = struct {
     }
 
     /// Return true if the scalar is zero
-    pub fn isZero(n: Scalar) bool {
+    pub fn isZero(n: *const Scalar) bool {
         const limbs = n.limbs;
         return (limbs[0] | limbs[1] | limbs[2] | limbs[3] | limbs[4]) == 0;
     }
 
     /// Return x+y (mod L)
-    pub fn add(x: Scalar, y: Scalar) Scalar {
+    pub fn add(x: *const Scalar, y: Scalar) Scalar {
         const carry0 = (x.limbs[0] + y.limbs[0]) >> 56;
         const t0 = (x.limbs[0] + y.limbs[0]) & 0xffffffffffffff;
         const t00 = t0;
@@ -197,7 +197,7 @@ pub const Scalar = struct {
     }
 
     /// Return x*r (mod L)
-    pub fn mul(x: Scalar, y: Scalar) Scalar {
+    pub fn mul(x: *const Scalar, y: Scalar) Scalar {
         const xy000 = @as(u128, x.limbs[0]) * @as(u128, y.limbs[0]);
         const xy010 = @as(u128, x.limbs[0]) * @as(u128, y.limbs[1]);
         const xy020 = @as(u128, x.limbs[0]) * @as(u128, y.limbs[2]);
@@ -509,14 +509,14 @@ pub const Scalar = struct {
     }
 
     /// Return x^2 (mod L)
-    pub fn sq(x: Scalar) Scalar {
-        return x.mul(x);
+    pub fn sq(x: *const Scalar) Scalar {
+        return x.mul(x.*);
     }
 
     /// Square a scalar `n` times
-    inline fn sqn(x: Scalar, comptime n: comptime_int) Scalar {
+    inline fn sqn(x: *const Scalar, comptime n: comptime_int) Scalar {
         var i: usize = 0;
-        var t = x;
+        var t = x.*;
         while (i < n) : (i += 1) {
             t = t.sq();
         }
@@ -524,12 +524,12 @@ pub const Scalar = struct {
     }
 
     /// Square and multiply
-    fn sqn_mul(x: Scalar, comptime n: comptime_int, y: Scalar) Scalar {
+    fn sqn_mul(x: *const Scalar, comptime n: comptime_int, y: Scalar) Scalar {
         return x.sqn(n).mul(y);
     }
 
     /// Return the inverse of a scalar (mod L), or 0 if x=0.
-    pub fn invert(x: Scalar) Scalar {
+    pub fn invert(x: *const Scalar) Scalar {
         const _10 = x.sq();
         const _11 = x.mul(_10);
         const _100 = x.mul(_11);

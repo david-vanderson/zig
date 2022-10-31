@@ -29,13 +29,13 @@ pub fn BoundedArray(comptime T: type, comptime buffer_capacity: usize) type {
         }
 
         /// View the internal array as a slice whose size was previously set.
-        pub fn slice(self: anytype) mem.Span(@TypeOf(&self.buffer)) {
+        pub fn slice(self: *Self) []T {
             return self.buffer[0..self.len];
         }
 
         /// View the internal array as a constant slice whose size was previously set.
         pub fn constSlice(self: *const Self) []const T {
-            return self.slice();
+            return self.buffer[0..self.len];
         }
 
         /// Adjust the slice's length to `len`.
@@ -53,7 +53,7 @@ pub fn BoundedArray(comptime T: type, comptime buffer_capacity: usize) type {
         }
 
         /// Return the element at index `i` of the slice.
-        pub fn get(self: Self, i: usize) T {
+        pub fn get(self: *const Self, i: usize) T {
             return self.constSlice()[i];
         }
 
@@ -63,12 +63,12 @@ pub fn BoundedArray(comptime T: type, comptime buffer_capacity: usize) type {
         }
 
         /// Return the maximum length of a slice.
-        pub fn capacity(self: Self) usize {
+        pub fn capacity(self: *const Self) usize {
             return self.buffer.len;
         }
 
         /// Check that the slice can hold at least `additional_count` items.
-        pub fn ensureUnusedCapacity(self: Self, additional_count: usize) error{Overflow}!void {
+        pub fn ensureUnusedCapacity(self: *const Self, additional_count: usize) error{Overflow}!void {
             if (self.len + additional_count > buffer_capacity) {
                 return error.Overflow;
             }

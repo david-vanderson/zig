@@ -73,14 +73,14 @@ pub const Secp256k1 = struct {
             var buf: [32]u8 = undefined;
 
             mem.writeIntLittle(u256, &buf, c1);
-            const c1x = scalar.mul(buf, b1_neg_s, .Little) catch unreachable;
+            const c1x = scalar.mul(&buf, b1_neg_s, .Little) catch unreachable;
 
             mem.writeIntLittle(u256, &buf, c2);
-            const c2x = scalar.mul(buf, b2_neg_s, .Little) catch unreachable;
+            const c2x = scalar.mul(&buf, b2_neg_s, .Little) catch unreachable;
 
             const r2 = scalar.add(c1x, c2x, .Little) catch unreachable;
 
-            var r1 = scalar.mul(r2, lambda_s, .Little) catch unreachable;
+            var r1 = scalar.mul(&r2, lambda_s, .Little) catch unreachable;
             r1 = scalar.sub(s, r1, .Little) catch unreachable;
 
             return SplitScalar{ .r1 = r1, .r2 = r2 };
@@ -88,7 +88,7 @@ pub const Secp256k1 = struct {
     };
 
     /// Reject the neutral element.
-    pub fn rejectIdentity(p: Secp256k1) IdentityElementError!void {
+    pub fn rejectIdentity(p: *const Secp256k1) IdentityElementError!void {
         if (p.x.isZero()) {
             return error.IdentityElement;
         }
@@ -154,7 +154,7 @@ pub const Secp256k1 = struct {
     }
 
     /// Serialize a point using the compressed SEC-1 format.
-    pub fn toCompressedSec1(p: Secp256k1) [33]u8 {
+    pub fn toCompressedSec1(p: *const Secp256k1) [33]u8 {
         var out: [33]u8 = undefined;
         const xy = p.affineCoordinates();
         out[0] = if (xy.y.isOdd()) 3 else 2;
@@ -163,7 +163,7 @@ pub const Secp256k1 = struct {
     }
 
     /// Serialize a point using the uncompressed SEC-1 format.
-    pub fn toUncompressedSec1(p: Secp256k1) [65]u8 {
+    pub fn toUncompressedSec1(p: *const Secp256k1) [65]u8 {
         var out: [65]u8 = undefined;
         out[0] = 4;
         const xy = p.affineCoordinates();
@@ -179,13 +179,13 @@ pub const Secp256k1 = struct {
     }
 
     /// Flip the sign of the X coordinate.
-    pub fn neg(p: Secp256k1) Secp256k1 {
+    pub fn neg(p: *const Secp256k1) Secp256k1 {
         return .{ .x = p.x, .y = p.y.neg(), .z = p.z };
     }
 
     /// Double a secp256k1 point.
     // Algorithm 9 from https://eprint.iacr.org/2015/1060.pdf
-    pub fn dbl(p: Secp256k1) Secp256k1 {
+    pub fn dbl(p: *const Secp256k1) Secp256k1 {
         var t0 = p.y.sq();
         var Z3 = t0.dbl();
         Z3 = Z3.dbl();
@@ -215,7 +215,7 @@ pub const Secp256k1 = struct {
 
     /// Add secp256k1 points, the second being specified using affine coordinates.
     // Algorithm 8 from https://eprint.iacr.org/2015/1060.pdf
-    pub fn addMixed(p: Secp256k1, q: AffineCoordinates) Secp256k1 {
+    pub fn addMixed(p: *const Secp256k1, q: AffineCoordinates) Secp256k1 {
         var t0 = p.x.mul(q.x);
         var t1 = p.y.mul(q.y);
         var t3 = q.x.add(q.y);
@@ -257,7 +257,7 @@ pub const Secp256k1 = struct {
 
     /// Add secp256k1 points.
     // Algorithm 7 from https://eprint.iacr.org/2015/1060.pdf
-    pub fn add(p: Secp256k1, q: Secp256k1) Secp256k1 {
+    pub fn add(p: *const Secp256k1, q: Secp256k1) Secp256k1 {
         var t0 = p.x.mul(q.x);
         var t1 = p.y.mul(q.y);
         var t2 = p.z.mul(q.z);
@@ -303,17 +303,17 @@ pub const Secp256k1 = struct {
     }
 
     /// Subtract secp256k1 points.
-    pub fn sub(p: Secp256k1, q: Secp256k1) Secp256k1 {
+    pub fn sub(p: *const Secp256k1, q: Secp256k1) Secp256k1 {
         return p.add(q.neg());
     }
 
     /// Subtract secp256k1 points, the second being specified using affine coordinates.
-    pub fn subMixed(p: Secp256k1, q: AffineCoordinates) Secp256k1 {
+    pub fn subMixed(p: *const Secp256k1, q: AffineCoordinates) Secp256k1 {
         return p.addMixed(q.neg());
     }
 
     /// Return affine coordinates.
-    pub fn affineCoordinates(p: Secp256k1) AffineCoordinates {
+    pub fn affineCoordinates(p: *const Secp256k1) AffineCoordinates {
         const zinv = p.z.invert();
         var ret = AffineCoordinates{
             .x = p.x.mul(zinv),
@@ -324,7 +324,7 @@ pub const Secp256k1 = struct {
     }
 
     /// Return true if both coordinate sets represent the same point.
-    pub fn equivalent(a: Secp256k1, b: Secp256k1) bool {
+    pub fn equivalent(a: *const Secp256k1, b: Secp256k1) bool {
         if (a.sub(b).rejectIdentity()) {
             return false;
         } else |_| {
@@ -423,28 +423,28 @@ pub const Secp256k1 = struct {
 
     /// Multiply an elliptic curve point by a scalar.
     /// Return error.IdentityElement if the result is the identity element.
-    pub fn mul(p: Secp256k1, s_: [32]u8, endian: std.builtin.Endian) IdentityElementError!Secp256k1 {
+    pub fn mul(p: *const Secp256k1, s_: [32]u8, endian: std.builtin.Endian) IdentityElementError!Secp256k1 {
         const s = if (endian == .Little) s_ else Fe.orderSwap(s_);
         if (p.is_base) {
             return pcMul16(&basePointPc, s, false);
         }
         try p.rejectIdentity();
-        const pc = precompute(p, 15);
+        const pc = precompute(p.*, 15);
         return pcMul16(&pc, s, false);
     }
 
     /// Multiply an elliptic curve point by a *PUBLIC* scalar *IN VARIABLE TIME*
     /// This can be used for signature verification.
-    pub fn mulPublic(p: Secp256k1, s_: [32]u8, endian: std.builtin.Endian) IdentityElementError!Secp256k1 {
+    pub fn mulPublic(p: *const Secp256k1, s_: [32]u8, endian: std.builtin.Endian) IdentityElementError!Secp256k1 {
         const s = if (endian == .Little) s_ else Fe.orderSwap(s_);
         const zero = comptime scalar.Scalar.zero.toBytes(.Little);
         if (mem.eql(u8, &zero, &s)) {
             return error.IdentityElement;
         }
-        const pc = precompute(p, 8);
+        const pc = precompute(p.*, 8);
         var lambda_p = try pcMul(&pc, Endormorphism.lambda_s, true);
         var split_scalar = Endormorphism.splitScalar(s, .Little);
-        var px = p;
+        var px = p.*;
 
         // If a key is negative, flip the sign to keep it half-sized,
         // and flip the sign of the Y point coordinate to compensate.

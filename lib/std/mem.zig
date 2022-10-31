@@ -1944,7 +1944,7 @@ pub fn TokenIterator(comptime T: type) type {
         }
 
         /// Returns a slice of the remaining bytes. Does not affect iterator state.
-        pub fn rest(self: Self) []const T {
+        pub fn rest(self: *const Self) []const T {
             // move to beginning of token
             var index: usize = self.index;
             while (index < self.buffer.len and self.isSplitByte(self.buffer[index])) : (index += 1) {}
@@ -1996,7 +1996,7 @@ pub fn SplitIterator(comptime T: type) type {
         }
 
         /// Returns a slice of the remaining bytes. Does not affect iterator state.
-        pub fn rest(self: Self) []const T {
+        pub fn rest(self: *const Self) []const T {
             const end = self.buffer.len;
             const start = self.index orelse end;
             return self.buffer[start..end];
@@ -2038,7 +2038,7 @@ pub fn SplitBackwardsIterator(comptime T: type) type {
         }
 
         /// Returns a slice of the remaining bytes. Does not affect iterator state.
-        pub fn rest(self: Self) []const T {
+        pub fn rest(self: *const Self) []const T {
             const end = self.index orelse 0;
             return self.buffer[0..end];
         }

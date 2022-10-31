@@ -125,7 +125,7 @@ pub fn MultiArrayList(comptime S: type) type {
         /// Compute pointers to the start of each field of the array.
         /// If you need to access multiple fields, calling this may
         /// be more efficient than calling `items()` multiple times.
-        pub fn slice(self: Self) Slice {
+        pub fn slice(self: *const Self) Slice {
             var result: Slice = .{
                 .ptrs = undefined,
                 .len = self.len,
@@ -142,7 +142,7 @@ pub fn MultiArrayList(comptime S: type) type {
         /// Get the slice of values for a specified field.
         /// If you need multiple fields, consider calling slice()
         /// instead.
-        pub fn items(self: Self, comptime field: Field) []FieldType(field) {
+        pub fn items(self: *const Self, comptime field: Field) []FieldType(field) {
             return self.slice().items(field);
         }
 
@@ -155,7 +155,7 @@ pub fn MultiArrayList(comptime S: type) type {
         }
 
         /// Obtain all the data for one array element.
-        pub fn get(self: Self, index: usize) S {
+        pub fn get(self: *const Self, index: usize) S {
             const slices = self.slice();
             var result: S = undefined;
             inline for (fields) |field_info, i| {
@@ -391,7 +391,7 @@ pub fn MultiArrayList(comptime S: type) type {
 
         /// Create a copy of this list with a new backing store,
         /// using the specified allocator.
-        pub fn clone(self: Self, gpa: Allocator) !Self {
+        pub fn clone(self: *const Self, gpa: Allocator) !Self {
             var result = Self{};
             errdefer result.deinit(gpa);
             try result.ensureTotalCapacity(gpa, self.len);
@@ -409,7 +409,7 @@ pub fn MultiArrayList(comptime S: type) type {
 
         /// `ctx` has the following method:
         /// `fn lessThan(ctx: @TypeOf(ctx), a_index: usize, b_index: usize) bool`
-        pub fn sort(self: Self, ctx: anytype) void {
+        pub fn sort(self: *const Self, ctx: anytype) void {
             const SortContext = struct {
                 sub_ctx: @TypeOf(ctx),
                 slice: Slice,
@@ -441,7 +441,7 @@ pub fn MultiArrayList(comptime S: type) type {
             return @reduce(.Add, capacity_vector * sizes_vector);
         }
 
-        fn allocatedBytes(self: Self) []align(@alignOf(S)) u8 {
+        fn allocatedBytes(self: *const Self) []align(@alignOf(S)) u8 {
             return self.bytes[0..capacityInBytes(self.capacity)];
         }
 

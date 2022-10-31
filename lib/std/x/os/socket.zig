@@ -90,11 +90,11 @@ pub const Socket = struct {
 
         /// Encodes a generic socket address into an extern union that may be reliably
         /// casted into a `sockaddr` which may be passed into socket syscalls.
-        pub fn toNative(self: Socket.Address) extern union {
+        pub fn toNative(self: *const Socket.Address) extern union {
             ipv4: os.sockaddr.in,
             ipv6: os.sockaddr.in6,
         } {
-            return switch (self) {
+            return switch (self.*) {
                 .ipv4 => |address| .{
                     .ipv4 = .{
                         .addr = @bitCast(u32, address.host.octets),
@@ -113,8 +113,8 @@ pub const Socket = struct {
         }
 
         /// Returns the number of bytes that make up the `sockaddr` equivalent to the address.
-        pub fn getNativeSize(self: Socket.Address) u32 {
-            return switch (self) {
+        pub fn getNativeSize(self: *const Socket.Address) u32 {
+            return switch (self.*) {
                 .ipv4 => @sizeOf(os.sockaddr.in),
                 .ipv6 => @sizeOf(os.sockaddr.in6),
             };

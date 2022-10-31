@@ -34,7 +34,7 @@ pub fn PriorityQueue(comptime T: type, comptime Context: type, comptime compareF
         }
 
         /// Free memory used by the queue.
-        pub fn deinit(self: Self) void {
+        pub fn deinit(self: *const Self) void {
             self.allocator.free(self.items);
         }
 
@@ -118,13 +118,13 @@ pub fn PriorityQueue(comptime T: type, comptime Context: type, comptime compareF
 
         /// Return the number of elements remaining in the priority
         /// queue.
-        pub fn count(self: Self) usize {
+        pub fn count(self: *const Self) usize {
             return self.len;
         }
 
         /// Return the number of elements that can be added to the
         /// queue before more memory is allocated.
-        pub fn capacity(self: Self) usize {
+        pub fn capacity(self: *const Self) usize {
             return self.items.len;
         }
 

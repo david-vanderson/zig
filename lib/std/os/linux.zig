@@ -3748,7 +3748,7 @@ pub const io_uring_cqe = extern struct {
     res: i32,
     flags: u32,
 
-    pub fn err(self: io_uring_cqe) E {
+    pub fn err(self: *const io_uring_cqe) E {
         if (self.res > -4096 and self.res < 0) {
             return @intToEnum(E, -self.res);
         }

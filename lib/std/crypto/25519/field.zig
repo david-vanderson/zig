@@ -76,8 +76,8 @@ pub const Fe = struct {
     }
 
     /// Pack a field element
-    pub fn toBytes(fe: Fe) [32]u8 {
-        var reduced = fe;
+    pub fn toBytes(fe: *const Fe) [32]u8 {
+        var reduced = fe.*;
         reduced.reduce();
         var s: [32]u8 = undefined;
         writeIntLittle(u64, s[0..8], reduced.limbs[0] | (reduced.limbs[1] << 51));
@@ -163,7 +163,7 @@ pub const Fe = struct {
     }
 
     /// Add a field element
-    pub inline fn add(a: Fe, b: Fe) Fe {
+    pub inline fn add(a: *const Fe, b: Fe) Fe {
         var fe: Fe = undefined;
         comptime var i = 0;
         inline while (i < 5) : (i += 1) {
@@ -173,7 +173,7 @@ pub const Fe = struct {
     }
 
     /// Substract a field element
-    pub inline fn sub(a: Fe, b: Fe) Fe {
+    pub inline fn sub(a: *const Fe, b: Fe) Fe {
         var fe = b;
         comptime var i = 0;
         inline while (i < 4) : (i += 1) {
@@ -192,12 +192,12 @@ pub const Fe = struct {
     }
 
     /// Negate a field element
-    pub inline fn neg(a: Fe) Fe {
-        return zero.sub(a);
+    pub inline fn neg(a: *const Fe) Fe {
+        return (&zero).sub(a.*);
     }
 
     /// Return true if a field element is negative
-    pub inline fn isNegative(a: Fe) bool {
+    pub inline fn isNegative(a: *const Fe) bool {
         return (a.toBytes()[0] & 1) != 0;
     }
 
@@ -264,7 +264,7 @@ pub const Fe = struct {
     }
 
     /// Multiply two field elements
-    pub inline fn mul(a: Fe, b: Fe) Fe {
+    pub inline fn mul(a: *const Fe, b: Fe) Fe {
         var ax: [5]u128 = undefined;
         var bx: [5]u128 = undefined;
         var a19: [5]u128 = undefined;
@@ -287,7 +287,7 @@ pub const Fe = struct {
         return _carry128(&r);
     }
 
-    inline fn _sq(a: Fe, comptime double: bool) Fe {
+    inline fn _sq(a: *const Fe, comptime double: bool) Fe {
         var ax: [5]u128 = undefined;
         var r: [5]u128 = undefined;
         comptime var i = 0;
@@ -316,17 +316,17 @@ pub const Fe = struct {
     }
 
     /// Square a field element
-    pub inline fn sq(a: Fe) Fe {
+    pub inline fn sq(a: *const Fe) Fe {
         return _sq(a, false);
     }
 
     /// Square and double a field element
-    pub inline fn sq2(a: Fe) Fe {
+    pub inline fn sq2(a: *const Fe) Fe {
         return _sq(a, true);
     }
 
     /// Multiply a field element with a small (32-bit) integer
-    pub inline fn mul32(a: Fe, comptime n: u32) Fe {
+    pub inline fn mul32(a: *const Fe, comptime n: u32) Fe {
         const sn = @intCast(u128, n);
         var fe: Fe = undefined;
         var x: u128 = 0;
@@ -341,9 +341,9 @@ pub const Fe = struct {
     }
 
     /// Square a field element `n` times
-    fn sqn(a: Fe, n: usize) Fe {
+    fn sqn(a: *const Fe, n: usize) Fe {
         var i: usize = 0;
-        var fe = a;
+        var fe = a.*;
         while (i < n) : (i += 1) {
             fe = fe.sq();
         }
@@ -351,9 +351,9 @@ pub const Fe = struct {
     }
 
     /// Return the inverse of a field element, or 0 if a=0.
-    pub fn invert(a: Fe) Fe {
+    pub fn invert(a: *const Fe) Fe {
         var t0 = a.sq();
-        var t1 = t0.sqn(2).mul(a);
+        var t1 = t0.sqn(2).mul(a.*);
         t0 = t0.mul(t1);
         t1 = t1.mul(t0.sq());
         t1 = t1.mul(t1.sqn(5));
@@ -366,26 +366,26 @@ pub const Fe = struct {
 
     /// Return a^((p-5)/8) = a^(2^252-3)
     /// Used to compute square roots since we have p=5 (mod 8); see Cohen and Frey.
-    pub fn pow2523(a: Fe) Fe {
+    pub fn pow2523(a: *const Fe) Fe {
         var t0 = a.mul(a.sq());
-        var t1 = t0.mul(t0.sqn(2)).sq().mul(a);
+        var t1 = t0.mul(t0.sqn(2)).sq().mul(a.*);
         t0 = t1.sqn(5).mul(t1);
         var t2 = t0.sqn(5).mul(t1);
         t1 = t2.sqn(15).mul(t2);
         t2 = t1.sqn(30).mul(t1);
         t1 = t2.sqn(60).mul(t2);
-        return t1.sqn(120).mul(t1).sqn(10).mul(t0).sqn(2).mul(a);
+        return t1.sqn(120).mul(t1).sqn(10).mul(t0).sqn(2).mul(a.*);
     }
 
     /// Return the absolute value of a field element
-    pub fn abs(a: Fe) Fe {
-        var r = a;
+    pub fn abs(a: *const Fe) Fe {
+        var r = a.*;
         r.cMov(a.neg(), @boolToInt(a.isNegative()));
         return r;
     }
 
     /// Return true if the field element is a square
-    pub fn isSquare(a: Fe) bool {
+    pub fn isSquare(a: *const Fe) bool {
         // Compute the Jacobi symbol x^((p-1)/2)
         const _11 = a.mul(a.sq());
         const _1111 = _11.mul(_11.sq().sq());
@@ -398,9 +398,9 @@ pub const Fe = struct {
         return @bitCast(bool, @truncate(u1, ~(t4.toBytes()[1] & 1)));
     }
 
-    fn uncheckedSqrt(x2: Fe) Fe {
+    fn uncheckedSqrt(x2: *const Fe) Fe {
         var e = x2.pow2523();
-        const p_root = e.mul(x2); // positive root
+        const p_root = e.mul(x2.*); // positive root
         const m_root = p_root.mul(Fe.sqrtm1); // negative root
         const m_root2 = m_root.sq();
         e = x2.sub(m_root2);
@@ -410,8 +410,8 @@ pub const Fe = struct {
     }
 
     /// Compute the square root of `x2`, returning `error.NotSquare` if `x2` was not a square
-    pub fn sqrt(x2: Fe) NotSquareError!Fe {
-        var x2_copy = x2;
+    pub fn sqrt(x2: *const Fe) NotSquareError!Fe {
+        var x2_copy = x2.*;
         const x = x2.uncheckedSqrt();
         const check = x.sq().sub(x2_copy);
         if (check.isZero()) {

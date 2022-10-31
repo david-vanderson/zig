@@ -1401,16 +1401,16 @@ pub const Order = enum {
     /// Greater than (`>`)
     gt,
 
-    pub fn invert(self: Order) Order {
-        return switch (self) {
+    pub fn invert(self: *const Order) Order {
+        return switch (self.*) {
             .lt => .gt,
             .eq => .eq,
             .gt => .lt,
         };
     }
 
-    pub fn compare(self: Order, op: CompareOperator) bool {
-        return switch (self) {
+    pub fn compare(self: *const Order, op: CompareOperator) bool {
+        return switch (self.*) {
             .lt => switch (op) {
                 .lt => true,
                 .lte => true,
@@ -1509,9 +1509,9 @@ test "order" {
 }
 
 test "order.invert" {
-    try testing.expect(Order.invert(order(0, 0)) == .eq);
-    try testing.expect(Order.invert(order(1, 0)) == .lt);
-    try testing.expect(Order.invert(order(-1, 0)) == .gt);
+    try testing.expect(order(0, 0).invert() == .eq);
+    try testing.expect(order(1, 0).invert() == .lt);
+    try testing.expect(order(-1, 0).invert() == .gt);
 }
 
 test "order.compare" {

@@ -42,11 +42,6 @@ pub fn LinearFifo(
         pub const Reader = std.io.Reader(*Self, error{}, readFn);
         pub const Writer = std.io.Writer(*Self, error{OutOfMemory}, appendWrite);
 
-        // Type of Self argument for slice operations.
-        // If buffer is inline (Static) then we need to ensure we haven't
-        // returned a slice into a copy on the stack
-        const SliceSelfArg = if (buffer_type == .Static) *Self else Self;
-
         pub usingnamespace switch (buffer_type) {
             .Static => struct {
                 pub fn init() Self {
@@ -80,7 +75,7 @@ pub fn LinearFifo(
             },
         };
 
-        pub fn deinit(self: Self) void {
+        pub fn deinit(self: *const Self) void {
             if (buffer_type == .Dynamic) self.allocator.free(self.buf);
         }
 
@@ -141,12 +136,12 @@ pub fn LinearFifo(
         }
 
         /// Returns number of items currently in fifo
-        pub fn readableLength(self: Self) usize {
+        pub fn readableLength(self: *const Self) usize {
             return self.count;
         }
 
         /// Returns a writable slice from the 'read' end of the fifo
-        fn readableSliceMut(self: SliceSelfArg, offset: usize) []T {
+        fn readableSliceMut(self: *Self, offset: usize) []T {
             if (offset > self.count) return &[_]T{};
 
             var start = self.head + offset;
@@ -160,7 +155,7 @@ pub fn LinearFifo(
         }
 
         /// Returns a readable slice from `offset`
-        pub fn readableSlice(self: SliceSelfArg, offset: usize) []const T {
+        pub fn readableSlice(self: *Self, offset: usize) []const T {
             return self.readableSliceMut(offset);
         }
 
@@ -232,13 +227,13 @@ pub fn LinearFifo(
         }
 
         /// Returns number of items available in fifo
-        pub fn writableLength(self: Self) usize {
+        pub fn writableLength(self: *const Self) usize {
             return self.buf.len - self.count;
         }
 
         /// Returns the first section of writable buffer
         /// Note that this may be of length 0
-        pub fn writableSlice(self: SliceSelfArg, offset: usize) []T {
+        pub fn writableSlice(self: *Self, offset: usize) []T {
             if (offset > self.buf.len) return &[_]T{};
 
             const tail = self.head + offset + self.count;
@@ -353,7 +348,7 @@ pub fn LinearFifo(
 
         /// Returns the item at `offset`.
         /// Asserts offset is within bounds.
-        pub fn peekItem(self: Self, offset: usize) T {
+        pub fn peekItem(self: *const Self, offset: usize) T {
             assert(offset < self.count);
 
             var index = self.head + offset;

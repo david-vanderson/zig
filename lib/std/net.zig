@@ -169,7 +169,7 @@ pub const Address = extern union {
         return mem.eql(u8, a_bytes, b_bytes);
     }
 
-    pub fn getOsSockLen(self: Address) os.socklen_t {
+    pub fn getOsSockLen(self: *const Address) os.socklen_t {
         switch (self.any.family) {
             os.AF.INET => return self.in.getOsSockLen(),
             os.AF.INET6 => return self.in6.getOsSockLen(),
@@ -286,7 +286,7 @@ pub const Ip4Address = extern struct {
         });
     }
 
-    pub fn getOsSockLen(self: Ip4Address) os.socklen_t {
+    pub fn getOsSockLen(self: *const Ip4Address) os.socklen_t {
         _ = self;
         return @sizeOf(os.sockaddr.in);
     }
@@ -606,7 +606,7 @@ pub const Ip6Address = extern struct {
         try std.fmt.format(out_stream, "]:{}", .{port});
     }
 
-    pub fn getOsSockLen(self: Ip6Address) os.socklen_t {
+    pub fn getOsSockLen(self: *const Ip6Address) os.socklen_t {
         _ = self;
         return @sizeOf(os.sockaddr.in6);
     }

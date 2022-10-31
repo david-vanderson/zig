@@ -158,7 +158,7 @@ pub const Ristretto255 = struct {
     }
 
     /// Return true if two Ristretto255 elements are equivalent
-    pub fn equivalent(p: Ristretto255, q: Ristretto255) bool {
+    pub fn equivalent(p: *const Ristretto255, q: Ristretto255) bool {
         const p_ = &p.p;
         const q_ = &q.p;
         const a = p_.x.mul(q_.y).equivalent(p_.y.mul(q_.x));

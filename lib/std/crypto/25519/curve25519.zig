@@ -33,19 +33,19 @@ pub const Curve25519 = struct {
     }
 
     /// Reject the neutral element.
-    pub fn rejectIdentity(p: Curve25519) IdentityElementError!void {
+    pub fn rejectIdentity(p: *const Curve25519) IdentityElementError!void {
         if (p.x.isZero()) {
             return error.IdentityElement;
         }
     }
 
     /// Multiply a point by the cofactor, returning WeakPublicKey if the element is in a small-order group.
-    pub fn clearCofactor(p: Curve25519) WeakPublicKeyError!Curve25519 {
+    pub fn clearCofactor(p: *const Curve25519) WeakPublicKeyError!Curve25519 {
         const cofactor = [_]u8{8} ++ [_]u8{0} ** 31;
         return ladder(p, cofactor, 4) catch return error.WeakPublicKey;
     }
 
-    fn ladder(p: Curve25519, s: [32]u8, comptime bits: usize) IdentityElementError!Curve25519 {
+    fn ladder(p: *const Curve25519, s: [32]u8, comptime bits: usize) IdentityElementError!Curve25519 {
         var x1 = p.x;
         var x2 = Fe.one;
         var z2 = Fe.zero;
@@ -86,7 +86,7 @@ pub const Curve25519 = struct {
     /// way to use Curve25519 for a DH operation.
     /// Return error.IdentityElement if the resulting point is
     /// the identity element.
-    pub fn clampedMul(p: Curve25519, s: [32]u8) IdentityElementError!Curve25519 {
+    pub fn clampedMul(p: *const Curve25519, s: [32]u8) IdentityElementError!Curve25519 {
         var t: [32]u8 = s;
         scalar.clamp(&t);
         return try ladder(p, t, 255);
@@ -96,7 +96,7 @@ pub const Curve25519 = struct {
     /// Return error.IdentityElement if the resulting point is
     /// the identity element or error.WeakPublicKey if the public
     /// key is a low-order point.
-    pub fn mul(p: Curve25519, s: [32]u8) (IdentityElementError || WeakPublicKeyError)!Curve25519 {
+    pub fn mul(p: *const Curve25519, s: [32]u8) (IdentityElementError || WeakPublicKeyError)!Curve25519 {
         _ = try p.clearCofactor();
         return try ladder(p, s, 256);
     }

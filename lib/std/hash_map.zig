@@ -647,26 +647,26 @@ pub fn HashMap(
         }
 
         /// Creates a copy of this map, using the same allocator
-        pub fn clone(self: Self) Allocator.Error!Self {
+        pub fn clone(self: *const Self) Allocator.Error!Self {
             var other = try self.unmanaged.cloneContext(self.allocator, self.ctx);
             return other.promoteContext(self.allocator, self.ctx);
         }
 
         /// Creates a copy of this map, using a specified allocator
-        pub fn cloneWithAllocator(self: Self, new_allocator: Allocator) Allocator.Error!Self {
+        pub fn cloneWithAllocator(self: *const Self, new_allocator: Allocator) Allocator.Error!Self {
             var other = try self.unmanaged.cloneContext(new_allocator, self.ctx);
             return other.promoteContext(new_allocator, self.ctx);
         }
 
         /// Creates a copy of this map, using a specified context
-        pub fn cloneWithContext(self: Self, new_ctx: anytype) Allocator.Error!HashMap(K, V, @TypeOf(new_ctx), max_load_percentage) {
+        pub fn cloneWithContext(self: *const Self, new_ctx: anytype) Allocator.Error!HashMap(K, V, @TypeOf(new_ctx), max_load_percentage) {
             var other = try self.unmanaged.cloneContext(self.allocator, new_ctx);
             return other.promoteContext(self.allocator, new_ctx);
         }
 
         /// Creates a copy of this map, using a specified allocator and context.
         pub fn cloneWithAllocatorAndContext(
-            self: Self,
+            self: *const Self,
             new_allocator: Allocator,
             new_ctx: anytype,
         ) Allocator.Error!HashMap(K, V, @TypeOf(new_ctx), max_load_percentage) {
@@ -875,7 +875,7 @@ pub fn HashMapUnmanaged(
 
         pub fn promoteContext(self: *const Self, allocator: Allocator, ctx: Context) Managed {
             return .{
-                .unmanaged = self,
+                .unmanaged = self.*,
                 .allocator = allocator,
                 .ctx = ctx,
             };
@@ -1307,7 +1307,7 @@ pub fn HashMapUnmanaged(
 
             // If you get a compile error on this line, it means that your generic hash
             // function is invalid for these parameters.
-            const hash = ctx.hash(key);
+            const hash = @TypeOf(ctx).hash(ctx, key);
             // verifyContext can't verify the return type of generic hash functions,
             // so we need to double-check it here.
             if (@TypeOf(hash) != Hash) {
@@ -1325,7 +1325,7 @@ pub fn HashMapUnmanaged(
                     const test_key = &self.keys()[idx];
                     // If you get a compile error on this line, it means that your generic eql
                     // function is invalid for these parameters.
-                    const eql = ctx.eql(key, test_key.*);
+                    const eql = @TypeOf(ctx).eql(ctx, key, test_key.*);
                     // verifyContext can't verify the return type of generic eql functions,
                     // so we need to double-check it here.
                     if (@TypeOf(eql) != bool) {
@@ -1458,12 +1458,12 @@ pub fn HashMapUnmanaged(
             }
         }
 
-        pub fn clone(self: Self, allocator: Allocator) Allocator.Error!Self {
+        pub fn clone(self: *const Self, allocator: Allocator) Allocator.Error!Self {
             if (@sizeOf(Context) != 0)
                 @compileError("Cannot infer context " ++ @typeName(Context) ++ ", call cloneContext instead.");
             return self.cloneContext(allocator, @as(Context, undefined));
         }
-        pub fn cloneContext(self: Self, allocator: Allocator, new_ctx: anytype) Allocator.Error!HashMapUnmanaged(K, V, @TypeOf(new_ctx), max_load_percentage) {
+        pub fn cloneContext(self: *const Self, allocator: Allocator, new_ctx: anytype) Allocator.Error!HashMapUnmanaged(K, V, @TypeOf(new_ctx), max_load_percentage) {
             var other = HashMapUnmanaged(K, V, @TypeOf(new_ctx), max_load_percentage){};
             if (self.size == 0)
                 return other;
@@ -2082,7 +2082,8 @@ test "std.hash_map getOrPutAdapted" {
         fn hash(self: @This(), adapted_key: []const u8) u64 {
             _ = self;
             const key = std.fmt.parseInt(u64, adapted_key, 10) catch unreachable;
-            return (AutoContext(u64){}).hash(key);
+            const T = AutoContext(u64);
+            return T.hash(T{}, key);
         }
     };
     var map = AutoHashMap(u64, u64).init(testing.allocator);

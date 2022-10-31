@@ -62,14 +62,14 @@ pub const BufMap = struct {
 
     /// Find the address of the value associated with a key.
     /// The returned pointer is invalidated if the map resizes.
-    pub fn getPtr(self: BufMap, key: []const u8) ?*[]const u8 {
+    pub fn getPtr(self: *const BufMap, key: []const u8) ?*[]const u8 {
         return self.hash_map.getPtr(key);
     }
 
     /// Return the map's copy of the value associated with
     /// a key.  The returned string is invalidated if this
     /// key is removed from the map.
-    pub fn get(self: BufMap, key: []const u8) ?[]const u8 {
+    pub fn get(self: *const BufMap, key: []const u8) ?[]const u8 {
         return self.hash_map.get(key);
     }
 
@@ -82,7 +82,7 @@ pub const BufMap = struct {
     }
 
     /// Returns the number of KV pairs stored in the map.
-    pub fn count(self: BufMap) BufMapHashMap.Size {
+    pub fn count(self: *const BufMap) BufMapHashMap.Size {
         return self.hash_map.count();
     }
 
@@ -91,11 +91,11 @@ pub const BufMap = struct {
         return self.hash_map.iterator();
     }
 
-    fn free(self: BufMap, value: []const u8) void {
+    fn free(self: *const BufMap, value: []const u8) void {
         self.hash_map.allocator.free(value);
     }
 
-    fn copy(self: BufMap, value: []const u8) ![]u8 {
+    fn copy(self: *const BufMap, value: []const u8) ![]u8 {
         return self.hash_map.allocator.dupe(u8, value);
     }
 };

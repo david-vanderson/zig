@@ -16,33 +16,33 @@ pub fn Mixin(comptime Socket: type) type {
         }
 
         /// Closes the socket.
-        pub fn deinit(self: Socket) void {
+        pub fn deinit(self: *const Socket) void {
             os.closeSocket(self.fd);
         }
 
         /// Shutdown either the read side, write side, or all side of the socket.
-        pub fn shutdown(self: Socket, how: os.ShutdownHow) !void {
+        pub fn shutdown(self: *const Socket, how: os.ShutdownHow) !void {
             return os.shutdown(self.fd, how);
         }
 
         /// Binds the socket to an address.
-        pub fn bind(self: Socket, address: Socket.Address) !void {
+        pub fn bind(self: *const Socket, address: Socket.Address) !void {
             return os.bind(self.fd, @ptrCast(*const os.sockaddr, &address.toNative()), address.getNativeSize());
         }
 
         /// Start listening for incoming connections on the socket.
-        pub fn listen(self: Socket, max_backlog_size: u31) !void {
+        pub fn listen(self: *const Socket, max_backlog_size: u31) !void {
             return os.listen(self.fd, max_backlog_size);
         }
 
         /// Have the socket attempt to the connect to an address.
-        pub fn connect(self: Socket, address: Socket.Address) !void {
+        pub fn connect(self: *const Socket, address: Socket.Address) !void {
             return os.connect(self.fd, @ptrCast(*const os.sockaddr, &address.toNative()), address.getNativeSize());
         }
 
         /// Accept a pending incoming connection queued to the kernel backlog
         /// of the socket.
-        pub fn accept(self: Socket, flags: std.enums.EnumFieldStruct(Socket.InitFlags, bool, false)) !Socket.Connection {
+        pub fn accept(self: *const Socket, flags: std.enums.EnumFieldStruct(Socket.InitFlags, bool, false)) !Socket.Connection {
             var address: Socket.Address.Native.Storage = undefined;
             var address_len: u32 = @sizeOf(Socket.Address.Native.Storage);
 
@@ -59,20 +59,20 @@ pub fn Mixin(comptime Socket: type) type {
 
         /// Read data from the socket into the buffer provided with a set of flags
         /// specified. It returns the number of bytes read into the buffer provided.
-        pub fn read(self: Socket, buf: []u8, flags: u32) !usize {
+        pub fn read(self: *const Socket, buf: []u8, flags: u32) !usize {
             return os.recv(self.fd, buf, flags);
         }
 
         /// Write a buffer of data provided to the socket with a set of flags specified.
         /// It returns the number of bytes that are written to the socket.
-        pub fn write(self: Socket, buf: []const u8, flags: u32) !usize {
+        pub fn write(self: *const Socket, buf: []const u8, flags: u32) !usize {
             return os.send(self.fd, buf, flags);
         }
 
         /// Writes multiple I/O vectors with a prepended message header to the socket
         /// with a set of flags specified. It returns the number of bytes that are
         /// written to the socket.
-        pub fn writeMessage(self: Socket, msg: Socket.Message, flags: u32) !usize {
+        pub fn writeMessage(self: *const Socket, msg: Socket.Message, flags: u32) !usize {
             while (true) {
                 const rc = os.system.sendmsg(self.fd, &msg, @intCast(c_int, flags));
                 return switch (os.errno(rc)) {
@@ -110,7 +110,7 @@ pub fn Mixin(comptime Socket: type) type {
         /// Read multiple I/O vectors with a prepended message header from the socket
         /// with a set of flags specified. It returns the number of bytes that were
         /// read into the buffer provided.
-        pub fn readMessage(self: Socket, msg: *Socket.Message, flags: u32) !usize {
+        pub fn readMessage(self: *const Socket, msg: *Socket.Message, flags: u32) !usize {
             while (true) {
                 const rc = os.system.recvmsg(self.fd, msg, @intCast(c_int, flags));
                 return switch (os.errno(rc)) {
@@ -131,7 +131,7 @@ pub fn Mixin(comptime Socket: type) type {
         }
 
         /// Query the address that the socket is locally bounded to.
-        pub fn getLocalAddress(self: Socket) !Socket.Address {
+        pub fn getLocalAddress(self: *const Socket) !Socket.Address {
             var address: Socket.Address.Native.Storage = undefined;
             var address_len: u32 = @sizeOf(Socket.Address.Native.Storage);
             try os.getsockname(self.fd, @ptrCast(*os.sockaddr, &address), &address_len);
@@ -139,7 +139,7 @@ pub fn Mixin(comptime Socket: type) type {
         }
 
         /// Query the address that the socket is connected to.
-        pub fn getRemoteAddress(self: Socket) !Socket.Address {
+        pub fn getRemoteAddress(self: *const Socket) !Socket.Address {
             var address: Socket.Address.Native.Storage = undefined;
             var address_len: u32 = @sizeOf(Socket.Address.Native.Storage);
             try os.getpeername(self.fd, @ptrCast(*os.sockaddr, &address), &address_len);
@@ -147,12 +147,12 @@ pub fn Mixin(comptime Socket: type) type {
         }
 
         /// Query and return the latest cached error on the socket.
-        pub fn getError(self: Socket) !void {
+        pub fn getError(self: *const Socket) !void {
             return os.getsockoptError(self.fd);
         }
 
         /// Query the read buffer size of the socket.
-        pub fn getReadBufferSize(self: Socket) !u32 {
+        pub fn getReadBufferSize(self: *const Socket) !u32 {
             var value: u32 = undefined;
             var value_len: u32 = @sizeOf(u32);
 
@@ -169,7 +169,7 @@ pub fn Mixin(comptime Socket: type) type {
         }
 
         /// Query the write buffer size of the socket.
-        pub fn getWriteBufferSize(self: Socket) !u32 {
+        pub fn getWriteBufferSize(self: *const Socket) !u32 {
             var value: u32 = undefined;
             var value_len: u32 = @sizeOf(u32);
 
@@ -186,7 +186,7 @@ pub fn Mixin(comptime Socket: type) type {
         }
 
         /// Set a socket option.
-        pub fn setOption(self: Socket, level: u32, code: u32, value: []const u8) !void {
+        pub fn setOption(self: *const Socket, level: u32, code: u32, value: []const u8) !void {
             return os.setsockopt(self.fd, level, code, value);
         }
 
@@ -194,7 +194,7 @@ pub fn Mixin(comptime Socket: type) type {
         /// sent, or if the timeout specified in seconds has been reached. It returns `error.UnsupportedSocketOption`
         /// if the host does not support the option for a socket to linger around up until a timeout specified in
         /// seconds.
-        pub fn setLinger(self: Socket, timeout_seconds: ?u16) !void {
+        pub fn setLinger(self: *const Socket, timeout_seconds: ?u16) !void {
             if (@hasDecl(os.SO, "LINGER")) {
                 const settings = Socket.Linger.init(timeout_seconds);
                 return self.setOption(os.SOL.SOCKET, os.SO.LINGER, mem.asBytes(&settings));
@@ -206,7 +206,7 @@ pub fn Mixin(comptime Socket: type) type {
         /// On connection-oriented sockets, have keep-alive messages be sent periodically. The timing in which keep-alive
         /// messages are sent are dependant on operating system settings. It returns `error.UnsupportedSocketOption` if
         /// the host does not support periodically sending keep-alive messages on connection-oriented sockets.
-        pub fn setKeepAlive(self: Socket, enabled: bool) !void {
+        pub fn setKeepAlive(self: *const Socket, enabled: bool) !void {
             if (@hasDecl(os.SO, "KEEPALIVE")) {
                 return self.setOption(os.SOL.SOCKET, os.SO.KEEPALIVE, mem.asBytes(&@as(u32, @boolToInt(enabled))));
             }
@@ -215,7 +215,7 @@ pub fn Mixin(comptime Socket: type) type {
 
         /// Allow multiple sockets on the same host to listen on the same address. It returns `error.UnsupportedSocketOption` if
         /// the host does not support sockets listening the same address.
-        pub fn setReuseAddress(self: Socket, enabled: bool) !void {
+        pub fn setReuseAddress(self: *const Socket, enabled: bool) !void {
             if (@hasDecl(os.SO, "REUSEADDR")) {
                 return self.setOption(os.SOL.SOCKET, os.SO.REUSEADDR, mem.asBytes(&@as(u32, @boolToInt(enabled))));
             }
@@ -224,7 +224,7 @@ pub fn Mixin(comptime Socket: type) type {
 
         /// Allow multiple sockets on the same host to listen on the same port. It returns `error.UnsupportedSocketOption` if
         /// the host does not supports sockets listening on the same port.
-        pub fn setReusePort(self: Socket, enabled: bool) !void {
+        pub fn setReusePort(self: *const Socket, enabled: bool) !void {
             if (@hasDecl(os.SO, "REUSEPORT")) {
                 return self.setOption(os.SOL.SOCKET, os.SO.REUSEPORT, mem.asBytes(&@as(u32, @boolToInt(enabled))));
             }
@@ -232,12 +232,12 @@ pub fn Mixin(comptime Socket: type) type {
         }
 
         /// Set the write buffer size of the socket.
-        pub fn setWriteBufferSize(self: Socket, size: u32) !void {
+        pub fn setWriteBufferSize(self: *const Socket, size: u32) !void {
             return self.setOption(os.SOL.SOCKET, os.SO.SNDBUF, mem.asBytes(&size));
         }
 
         /// Set the read buffer size of the socket.
-        pub fn setReadBufferSize(self: Socket, size: u32) !void {
+        pub fn setReadBufferSize(self: *const Socket, size: u32) !void {
             return self.setOption(os.SOL.SOCKET, os.SO.RCVBUF, mem.asBytes(&size));
         }
 
@@ -247,7 +247,7 @@ pub fn Mixin(comptime Socket: type) type {
         /// Set a timeout on the socket that is to occur if no messages are successfully written
         /// to its bound destination after a specified number of milliseconds. A subsequent write
         /// to the socket will thereafter return `error.WouldBlock` should the timeout be exceeded.
-        pub fn setWriteTimeout(self: Socket, milliseconds: usize) !void {
+        pub fn setWriteTimeout(self: *const Socket, milliseconds: usize) !void {
             const timeout = os.timeval{
                 .tv_sec = @intCast(i32, milliseconds / time.ms_per_s),
                 .tv_usec = @intCast(i32, (milliseconds % time.ms_per_s) * time.us_per_ms),
@@ -263,7 +263,7 @@ pub fn Mixin(comptime Socket: type) type {
         /// from its bound destination after a specified number of milliseconds. A subsequent
         /// read from the socket will thereafter return `error.WouldBlock` should the timeout be
         /// exceeded.
-        pub fn setReadTimeout(self: Socket, milliseconds: usize) !void {
+        pub fn setReadTimeout(self: *const Socket, milliseconds: usize) !void {
             const timeout = os.timeval{
                 .tv_sec = @intCast(i32, milliseconds / time.ms_per_s),
                 .tv_usec = @intCast(i32, (milliseconds % time.ms_per_s) * time.us_per_ms),
